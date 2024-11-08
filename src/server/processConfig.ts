@@ -1,9 +1,10 @@
 /**
  * @file processConfig.ts
- * @description This script reads a firewall configuration file, parses each line to extract network objects
- *              and their attributes (like host, subnet, description), and then uses Prisma to insert the
- *              parsed data into a PostgreSQL database (rn it just consolelogs).
- *              It supports parsing standard configurations and handles additional configurations that start with a space.
+ * @description This script reads a firewall configuration file provided as a command-line argument,
+ *              parses each line to extract network objects and their attributes (like host, subnet,
+ *              description), and then uses Prisma to insert the parsed data into a MongoDB database.
+ *              It supports parsing standard configurations and handles additional configurations
+ *              that start with a space.
  * @requires fs The Node.js File System module to handle file operations.
  * @requires readline The Node.js Readline module for reading from files line by line.
  * @requires @prisma/client Prisma Client for database operations.
@@ -14,9 +15,8 @@
  * The script is designed to be executed with Node.js and expects a file path as an input.
  *
  * Usage:
- * 1. Ensure Prisma is configured correctly with your sql database.
- * 2. Place the configuration file in an accessible location and provide the correct path when calling `processConfig`.
- * 3. Run this script using ts-node: ts-node src/processConfig.ts
+ * Run this script using ts-node and provide the configuration file path as an argument:
+ * ts-node src/processConfig.ts src/server/sample.txt
  *
  * Example configuration lines:
  * object network Tufts-Management-172.20.0.0
@@ -24,7 +24,7 @@
  * host 130.64.25.50
  * description Added by script
  * 
- * These configurations are parsed to create and store objects in the PostgreSQL database.
+ * These configurations are parsed to create and store objects in the MongoDB database.
  */
 
 import fs from 'fs';
@@ -44,22 +44,12 @@ const processConfig = async (filePath: string): Promise<void> => {
 
   let currentObject: ObjectConfig = {};
 
-  // Function to validate and type-cast the parsed object
-  const validateObjectConfig = (config: ObjectConfig): ObjectConfig | null => {
-    if (!config.objectName) {
-      console.error("Validation error: 'objectName' is required");
-      return null;
-    }
-    return config;
-  };
-
-  // Adjusted loop where you check and insert the object
   for await (const line of rl) {
     if (line.startsWith('object network')) {
       if (currentObject.objectName) {
         const validObject = validateObjectConfig(currentObject);
         if (validObject) {
-          await insertObject(validObject); // Insert only if validation is successful
+          await insertObject(validObject);
         }
       }
       currentObject = { type: 'Network' };
@@ -74,21 +64,27 @@ const processConfig = async (filePath: string): Promise<void> => {
       currentObject.subnetMask = parts[2];
     } else if (line.trim().startsWith('description ')) {
       currentObject.description = line.trim().substring(12);
-    }
-    else if (line.startsWith(' ')) {
-
+    } else if (line.startsWith(' ')) {
+      // Handle additional configuration details that start with a space
     }
   }
-
 
   if (currentObject.objectName) {
-    await insertObject(currentObject); // Insert the last object
+    await insertObject(currentObject);
   }
+};
+
+const validateObjectConfig = (config: ObjectConfig): ObjectConfig | null => {
+  if (!config.objectName) {
+    console.error("Validation error: 'objectName' is required");
+    return null;
+  }
+  return config;
 };
 
 const insertObject = async (data: ObjectConfig): Promise<void> => {
   try {
-    console.log(data)
+    console.log("Attempting to insert:", data);
     // const newObject = await prisma.object.create({ data });
     // console.log("Created new object: ", newObject);
   } catch (error) {
@@ -96,5 +92,11 @@ const insertObject = async (data: ObjectConfig): Promise<void> => {
   }
 };
 
-// Replace 'path_to_your_file.txt' with the path to your firewall configuration file
-processConfig('src/server/sample.txt').catch(console.error);
+// Read the file path from the command line arguments
+const filePath = process.argv[2];
+if (!filePath) {
+  console.error("Please provide the path to the firewall configuration file.");
+  process.exit(1);
+}
+
+processConfig(filePath).catch(console.error);
