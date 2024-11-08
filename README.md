@@ -19,3 +19,9 @@ To set up and run the project locally, follow these steps:
 
 6. Access and manage your database tables using Prisma Studio:
     'npx prisma studio'
+
+
+Firewall Configuration Processor
+This script, processConfig.ts, reads a firewall configuration file, parses each line to extract network objects and their attributes (like host, subnet, description), and inserts the parsed data into a MongoDB database using Prisma. It is built with TypeScript and Node.js, ensuring strong type safety and efficient data handling.
+
+'npx ts-node src/server/processConfig.ts src/server/sample.txt'
