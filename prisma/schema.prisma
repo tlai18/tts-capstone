@@ -17,9 +17,9 @@ generator client {
 model Host {
   
   objectNetwork String @id
-  host          String
-  subnet        String  //double check this  
-  description   String
+  host          String?
+  subnet        String?  //double check this  
+  description   String?
 
 } 
 

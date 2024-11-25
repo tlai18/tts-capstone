@@ -29,7 +29,7 @@
 
 import fs from 'fs';
 import readline from 'readline';
-import { NetworkObject, Prisma, PrismaClient } from '@prisma/client';
+import { NetworkObject, Host, Prisma, PrismaClient } from '@prisma/client';
 import { ObjectConfig } from './ObjectConfig';
 
 const prisma = new PrismaClient();
@@ -43,7 +43,8 @@ const processConfig = async (filePath: string): Promise<void> => {
   });
 
   let currentObject: ObjectConfig = {};
-  var networkObjects: NetworkObject[] = [];
+  let networkObjects: NetworkObject[] = [];
+  let hosts: Host[] = [];
 
   for await (const line of rl) {
     if (line.startsWith('object network')) {
@@ -56,9 +57,20 @@ const processConfig = async (filePath: string): Promise<void> => {
         
     //   }
     //   currentObject = { type: 'Network' };
-      const parts = line.split(' ');
     //   currentObject.objectName = parts[2];
-      networkObjects.push({ name: parts[2] });
+    
+        /* Currently, a single piece of data can span multiple lines.
+         * It would be preferable to have a single line per object.
+         * If not possible, this logic will have to be updated to be able to
+         * read lines until you actually reach the end of a piece of data. */
+        const parts = line.split(' ');
+        console.log(parts);
+        const desc = line.includes('description') ? line.split('description ')[1] : null;
+        networkObjects.push({ name: parts[2] });
+        if (parts[3] == "host") {
+            hosts.push({objectNetwork: parts[2], host: parts[4], subnet: null, description: desc});
+        }
+      
     } else if (line.trim().startsWith('host ')) {
       const parts = line.trim().split(' ');
       currentObject.ipAddress = parts[1];
@@ -72,8 +84,25 @@ const processConfig = async (filePath: string): Promise<void> => {
       // Handle additional configuration details that start with a space
     }
   }
+ 
+    // Update or insert all objects into the database
+    await prisma.$transaction([
+        ...networkObjects.map(networkObject =>
+            prisma.networkObject.upsert({
+                where: { name: networkObject.name },
+                update: { },
+                create: { name: networkObject.name },
+            })
+        ),
+        ...hosts.map(host =>
+            prisma.host.upsert({
+                where: { objectNetwork: host.objectNetwork },
+                update: { host: host.host, subnet: host.subnet, description: host.description },
+                create: { objectNetwork: host.objectNetwork, host: host.host, subnet: host.subnet, description: host.description },
+            })
+        )
+    ]);
 
-  await prisma.networkObject.createMany({data: networkObjects});
 };
 
 const validateObjectConfig = (config: ObjectConfig): ObjectConfig | null => {
