@@ -15,7 +15,7 @@
  * The script is designed to be executed with Node.js and expects a file path as an input.
  *
  * Usage:
- * Run this script using ts-node and provide the configuration file path as an argument:
+ * Run this script using 'ts-node' or 'npx ts-node' and provide the configuration file path as an argument:
  * ts-node src/processConfig.ts src/server/sample.txt
  *
  * Example configuration lines:
@@ -29,7 +29,7 @@
 
 import fs from 'fs';
 import readline from 'readline';
-import { PrismaClient } from '@prisma/client';
+import { NetworkObject, Prisma, PrismaClient } from '@prisma/client';
 import { ObjectConfig } from './ObjectConfig';
 
 const prisma = new PrismaClient();
@@ -43,18 +43,22 @@ const processConfig = async (filePath: string): Promise<void> => {
   });
 
   let currentObject: ObjectConfig = {};
+  var networkObjects: NetworkObject[] = [];
 
   for await (const line of rl) {
     if (line.startsWith('object network')) {
-      if (currentObject.objectName) {
-        const validObject = validateObjectConfig(currentObject);
-        if (validObject) {
-          await insertObject(validObject);
-        }
-      }
-      currentObject = { type: 'Network' };
+    //   if (currentObject.objectName) {
+    //     console.log(currentObject);
+    //     // const validObject = validateObjectConfig(currentObject);
+    //     // if (validObject) {
+    //     //   objects.push(validObject);
+    //     // }
+        
+    //   }
+    //   currentObject = { type: 'Network' };
       const parts = line.split(' ');
-      currentObject.objectName = parts[2];
+    //   currentObject.objectName = parts[2];
+      networkObjects.push({ name: parts[2] });
     } else if (line.trim().startsWith('host ')) {
       const parts = line.trim().split(' ');
       currentObject.ipAddress = parts[1];
@@ -69,9 +73,7 @@ const processConfig = async (filePath: string): Promise<void> => {
     }
   }
 
-  if (currentObject.objectName) {
-    await insertObject(currentObject);
-  }
+  await prisma.networkObject.createMany({data: networkObjects});
 };
 
 const validateObjectConfig = (config: ObjectConfig): ObjectConfig | null => {
@@ -82,11 +84,9 @@ const validateObjectConfig = (config: ObjectConfig): ObjectConfig | null => {
   return config;
 };
 
-const insertObject = async (data: ObjectConfig): Promise<void> => {
+const insertObject = async (data: ObjectConfig, table: String): Promise<void> => {
   try {
     console.log("Attempting to insert:", data);
-    // const newObject = await prisma.object.create({ data });
-    // console.log("Created new object: ", newObject);
   } catch (error) {
     console.error("Error inserting object:", data, error);
   }
