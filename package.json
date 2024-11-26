@@ -8,7 +8,7 @@
     "start:server": "ts-node src/server/server.ts"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node prisma/seed.ts -a populate -f"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.21.1",
+    "@types/yargs": "^17.0.33",
     "body-parser": "^1.20.3",
     "express": "^4.21.1",
     "express-session": "^1.18.1",
@@ -32,6 +33,7 @@
     "n": "^10.0.0",
     "passport": "^0.7.0",
     "passport-saml": "^3.2.4",
-    "prisma": "^5.21.1"
+    "prisma": "^5.21.1",
+    "yargs": "^17.7.2"
   }
 }

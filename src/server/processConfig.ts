@@ -15,8 +15,14 @@
  * The script is designed to be executed with Node.js and expects a file path as an input.
  *
  * Usage:
- * Run this script using 'ts-node' or 'npx ts-node' and provide the configuration file path as an argument:
- * ts-node src/processConfig.ts src/server/sample.txt
+ * Run this script using 'ts-node' or 'npx ts-node'.
+ * 
+ * Arguments:
+ * 1. [REQUIRED] The path to the firewall configuration file. '-f [file path]'
+ * 2. The action to perform on the database [populate/update]. '-a [action]'. Defaults to 'update'.
+ * 
+ * Example run:
+ * ts-node src/processConfig.ts -f src/server/sample.txt
  *
  * Example configuration lines:
  * object network Tufts-Management-172.20.0.0
@@ -29,13 +35,19 @@
 
 import fs from 'fs';
 import readline from 'readline';
+import yargs, { nargs } from 'yargs';
 import { NetworkObject, Host, Prisma, PrismaClient } from '@prisma/client';
 import { ObjectConfig } from './ObjectConfig';
+import { sourceMapsEnabled } from 'process';
 
 const prisma = new PrismaClient();
 
 const processConfig = async (filePath: string): Promise<void> => {
-  const fileStream = fs.createReadStream(filePath);
+    
+  // Validate and reformat the file if necessary
+  const [reformatted, formattedPath] = await validateReformatFile(filePath);
+  console.log(formattedPath);
+  const fileStream = fs.createReadStream(formattedPath);
 
   const rl = readline.createInterface({
     input: fileStream,
@@ -85,31 +97,33 @@ const processConfig = async (filePath: string): Promise<void> => {
     }
   }
  
-    // Insert all objects into the database
-    await prisma.networkObject.createMany({
-        data: networkObjects,
-    });
-    await prisma.host.createMany({
-        data: hosts,
-    });
-  
-    // Update or insert all objects into the database
-    // await prisma.$transaction([
-    //     ...networkObjects.map(networkObject =>
-    //         prisma.networkObject.upsert({
-    //             where: { name: networkObject.name },
-    //             update: { },
-    //             create: { name: networkObject.name },
-    //         })
-    //     ),
-    //     ...hosts.map(host =>
-    //         prisma.host.upsert({
-    //             where: { objectNetwork: host.objectNetwork },
-    //             update: { host: host.host, subnet: host.subnet, description: host.description },
-    //             create: { objectNetwork: host.objectNetwork, host: host.host, subnet: host.subnet, description: host.description },
-    //         })
-    //     )
-    // ]);
+    if (args.action === 'populate') {
+        // Insert all objects into the database
+        await prisma.networkObject.createMany({
+            data: networkObjects,
+        });
+        await prisma.host.createMany({
+            data: hosts,
+        });
+    } else if (args.action === 'update') {
+        // Update or insert all objects into the database
+        await prisma.$transaction([
+            ...networkObjects.map(networkObject =>
+                prisma.networkObject.upsert({
+                    where: { name: networkObject.name },
+                    update: { },
+                    create: { name: networkObject.name },
+                })
+            ),
+            ...hosts.map(host =>
+                prisma.host.upsert({
+                    where: { objectNetwork: host.objectNetwork },
+                    update: { host: host.host, subnet: host.subnet, description: host.description },
+                    create: { objectNetwork: host.objectNetwork, host: host.host, subnet: host.subnet, description: host.description },
+                })
+            )
+        ]);
+    }
 };
 
 const validateObjectConfig = (config: ObjectConfig): ObjectConfig | null => {
@@ -120,6 +134,42 @@ const validateObjectConfig = (config: ObjectConfig): ObjectConfig | null => {
   return config;
 };
 
+const objectTypes = ['object network', 'object-group', 'access-list'];
+
+async function validateReformatFile(filePath: string): Promise<[boolean, string]> {
+    let reformatted = false;
+    let outputPath = filePath;
+    
+    const data = await fs.promises.readFile(filePath, 'utf8');
+    const lines = data.split('\n');
+    let processedLines = [];
+    let currentLine = '';
+    
+    for (let line of lines) {
+        if (objectTypes.some(type => line.startsWith(type))) {
+            if (currentLine.trim() !== '') {
+                processedLines.push(currentLine);
+            }
+            currentLine = line;
+        } else {
+            currentLine += ' ' + line.trim();
+            reformatted = true;
+        }
+    }
+    
+    if (currentLine.trim()) {
+        processedLines.push(currentLine);
+    }
+    
+    if (reformatted) {
+        outputPath = filePath + ".reformatted";
+        await fs.promises.writeFile(outputPath, processedLines.join('\n'));
+        console.log('File processed and saved to', outputPath);
+    }
+    
+    return [reformatted, outputPath];
+}
+
 const insertObject = async (data: ObjectConfig, table: String): Promise<void> => {
   try {
     console.log("Attempting to insert:", data);
@@ -129,12 +179,39 @@ const insertObject = async (data: ObjectConfig, table: String): Promise<void> =>
 };
 
 // Read the file path from the command line arguments
-const filePath = process.argv[2];
-if (!filePath) {
-  console.error("Please provide the path to the firewall configuration file.");
-  process.exit(1);
-}
+// const filePath = process.argv[2];
+// if (!filePath) {
+//   console.error("Please provide the path to the firewall configuration file.");
+//   process.exit(1);
+// }
 
-processConfig(filePath).catch(console.error);
+// const operation = process.argv[3] ? process.argv[3].toLowerCase() : 'update';
+// if (!operation && operation != 'populate' && operation != 'update') {
+//   console.error("Please provide a valid operation [populate/update] to perform.");
+//   process.exit(1);
+// }
+
+// Read command line arguments
+const args = yargs(process.argv.slice(2))
+    .options({
+        'action': {
+            alias: 'a',
+            describe: 'Action to perform [populate/demand] on the database',
+            choices: ['populate', 'update'],
+            type: 'string',
+            default: 'update',
+            nargs: 1,
+        },
+        'file': {
+            alias: 'f',
+            describe: 'Path to the firewall configuration file',
+            type: 'string',
+            demandOption: 'Please provide the path to the firewall configuration file.',
+            nargs: 1,
+        }
+    })
+    .parseSync();
+    
+processConfig(args.file).catch(console.error);
 
 export { processConfig };
