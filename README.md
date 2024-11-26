@@ -25,3 +25,11 @@ Firewall Configuration Processor
 This script, processConfig.ts, reads a firewall configuration file, parses each line to extract network objects and their attributes (like host, subnet, description), and inserts the parsed data into a MongoDB database using Prisma. It is built with TypeScript and Node.js, ensuring strong type safety and efficient data handling.
 
 'npx ts-node src/server/processConfig.ts src/server/sample.txt'
+
+# Resetting and importing the database
+
+To quickly reset and update the database with a new file:
+
+1. Navigate to the root directory and install dependencies
+
+2. Run 'npx prisma db push --force-reset && npx prisma db seed [filename]' with [filename] being the path to the file containing the new firewall rule configs.

@@ -12,6 +12,7 @@ datasource db {
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["driverAdapters"]
+  seed            = "seed.ts"
 }
 
 model Host {

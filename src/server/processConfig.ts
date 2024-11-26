@@ -85,24 +85,31 @@ const processConfig = async (filePath: string): Promise<void> => {
     }
   }
  
+    // Insert all objects into the database
+    await prisma.networkObject.createMany({
+        data: networkObjects,
+    });
+    await prisma.host.createMany({
+        data: hosts,
+    });
+  
     // Update or insert all objects into the database
-    await prisma.$transaction([
-        ...networkObjects.map(networkObject =>
-            prisma.networkObject.upsert({
-                where: { name: networkObject.name },
-                update: { },
-                create: { name: networkObject.name },
-            })
-        ),
-        ...hosts.map(host =>
-            prisma.host.upsert({
-                where: { objectNetwork: host.objectNetwork },
-                update: { host: host.host, subnet: host.subnet, description: host.description },
-                create: { objectNetwork: host.objectNetwork, host: host.host, subnet: host.subnet, description: host.description },
-            })
-        )
-    ]);
-
+    // await prisma.$transaction([
+    //     ...networkObjects.map(networkObject =>
+    //         prisma.networkObject.upsert({
+    //             where: { name: networkObject.name },
+    //             update: { },
+    //             create: { name: networkObject.name },
+    //         })
+    //     ),
+    //     ...hosts.map(host =>
+    //         prisma.host.upsert({
+    //             where: { objectNetwork: host.objectNetwork },
+    //             update: { host: host.host, subnet: host.subnet, description: host.description },
+    //             create: { objectNetwork: host.objectNetwork, host: host.host, subnet: host.subnet, description: host.description },
+    //         })
+    //     )
+    // ]);
 };
 
 const validateObjectConfig = (config: ObjectConfig): ObjectConfig | null => {
@@ -129,3 +136,5 @@ if (!filePath) {
 }
 
 processConfig(filePath).catch(console.error);
+
+export { processConfig };
