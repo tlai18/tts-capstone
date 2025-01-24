@@ -1,5 +1,5 @@
-import { processConfig } from '../src/server/processConfig';
+import { processConfig } from '../src/processConfig';
 
 async function seed() {
-    await processConfig('src/server/sample.txt').catch(console.error);
+    await processConfig('src/sample.txt').catch(console.error);
 }

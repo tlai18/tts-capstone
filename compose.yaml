@@ -21,12 +21,28 @@ services:
       - "5555:5555"
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres
+    develop:
+      watch:
+        - action: sync
+          path: ./server
+          target: /app
+        - action: rebuild
+          path: package.json
+          target: /app
       
   client:
     container_name: client
     build: ./client
     ports:
       - "3000:3000"
+    develop:
+      watch:
+        - action: sync
+          path: ./client
+          target: /app
+        - action: rebuild
+          path: package.json
+          target: /app
       
 volumes:
   postgres:
