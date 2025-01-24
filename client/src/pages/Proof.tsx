@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import UserDataForm from '../components/UserDataForm';
 import DataList from '../components/DataList';
-import { Host } from '@prisma/client';
+import { Host } from '../types/Host';
 
 const Proof: React.FC = () => {
     const [ip, setIP] = useState<string>("");
