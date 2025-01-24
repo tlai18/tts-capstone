@@ -1,0 +1,79 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+  seed            = "seed.ts"
+}
+
+model Host {
+  
+  objectNetwork String @id
+  host          String?
+  subnet        String?  //double check this  
+  description   String?
+
+} 
+
+model NetworkObject {
+  
+  name String @id
+  networkGroups NetGrouptoNetObj[]
+
+}
+
+model NetworkGroup {
+  
+  objectGroupNetwork String @id
+  description String? 
+  networkObjects NetGrouptoNetObj[]
+
+}
+
+model NetGrouptoNetObj {
+
+  networkGroupId String
+  networkGroup   NetworkGroup @relation(fields: [networkGroupId], references: [objectGroupNetwork])
+  
+  networkObjectId String
+  networkObject  NetworkObject @relation(fields: [networkObjectId], references: [name])
+
+  @@id([networkGroupId, networkObjectId])
+
+}
+
+model Port {
+  
+  portName   String @id 
+  portGroups PortGrouptoPortObj[]
+
+} 
+
+model PortGroup {
+  
+  objectGroupService String @id
+  protocol           String
+  ports              PortGrouptoPortObj[]
+  
+}
+
+model PortGrouptoPortObj {
+
+  portGroupId   String
+  portGroup     PortGroup @relation(fields: [portGroupId], references: [objectGroupService])
+  
+  portObjectId  String
+  portObject    Port @relation(fields: [portObjectId], references: [portName])
+
+  @@id([portGroupId, portObjectId])
+
+}

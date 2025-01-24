@@ -22,23 +22,23 @@ app.post('/auth/callback', async (req: Request, res: Response) => {
     name: 'Mock User',
   };
 
-  try {
-    // Check if the user exists in the database
-    let user = await prisma.user.findUnique({ where: { email: mockProfile.email } });
+//   try {
+//     // Check if the user exists in the database
+//     let user = await prisma.user.findUnique({ where: { email: mockProfile.email } });
 
-    if (!user) {
-      // If the user does not exist, create a new user
-      user = await prisma.user.create({
-        data: { email: mockProfile.email, name: mockProfile.name },
-      });
-    }
+//     if (!user) {
+//       // If the user does not exist, create a new user
+//       user = await prisma.user.create({
+//         data: { email: mockProfile.email, name: mockProfile.name },
+//       });
+//     }
 
-    // Simulate setting a session or a cookie
-    // In a real application, use a session middleware like `express-session`
-    res.json({ message: 'User logged in successfully', user });
-  } catch (error) {
-    res.status(500).json({ message: 'Error during authentication', error });
-  }
+//     // Simulate setting a session or a cookie
+//     // In a real application, use a session middleware like `express-session`
+//     res.json({ message: 'User logged in successfully', user });
+//   } catch (error) {
+//     res.status(500).json({ message: 'Error during authentication', error });
+//   }
 });
 
 // Middleware placeholder for future Shibboleth authentication
@@ -71,8 +71,21 @@ app.get('/', (req: Request, res: Response) => {
   res.send('Welcome to the app structured for future Shibboleth integration!');
 });
 
+// Fetch Data from IP
+app.post('/getData', async (req: Request, res: Response) => {
+    const ip = req.body.ip;
+    
+    const hosts = await prisma.host.findMany({
+        where: {
+            host: ip,
+        },
+    });
+    
+    res.json(hosts);
+});
+
 // Start the Express server
-const PORT = 3000;
+const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

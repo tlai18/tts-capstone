@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import Login from './pages/Login';
+import Proof from './pages/Proof';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<{ email: string; name: string } | null>(null);
@@ -31,7 +32,7 @@ const App: React.FC = () => {
   return (
     <Router>
       <div className="App">
-        <nav>
+        {/* <nav>
           <Link to="/">Home</Link>
           {user ? (
             <>
@@ -41,7 +42,7 @@ const App: React.FC = () => {
           ) : (
             <Link to="/auth/login">Login</Link>
           )}
-        </nav>
+        </nav> */}
         <Routes>
           <Route path="/" element={<Home />} />
           <Route
@@ -49,6 +50,7 @@ const App: React.FC = () => {
             element={user ? <ProtectedPage user={user} /> : <Navigate to="/auth/login" />}
           />
           <Route path="/auth/login" element={<Login />} />
+          <Route path="/proof" element={<Proof />} />
         </Routes>
       </div>
     </Router>
