@@ -1,5 +1,12 @@
 # tts-capstone
 
+# Run with Docker
+
+1. Download [Docker Desktop](https://docs.docker.com/get-started/get-docker/)
+2. Run `docker compose up --watch`
+3. To use the terminal for the server, run `docker exec -it server sh`.
+4. Inside the server terminal, run `npx prisma studio` to view the database studio or `npx prisma db push --force-reset && npx prisma db seed src/sample.txt` to import the sample file.
+
 # Project Setup Guide
 
 To set up and run the project locally, follow these steps:
@@ -49,7 +56,7 @@ To set up all the components:
 
 To perform functions:
 1. Navigate to root directory first to begin importing data.
-2. Run `npx prisma db push --force-reset && npx prisma db seed [filename]` with [filename] being the path to the file containing the new firewall rule configs. A sample file is provided at the path `src/server/sample.txt`
+2. Run `npx prisma db push --force-reset && npx prisma db seed [filename]` with [filename] being the path to the file containing the new firewall rule configs. A sample file is provided at the path `src/sample.txt`
 3. In your web browser, navigate back to the proof of concept page at http://localhost:3000/proof
 4. Copy any host from your Prisma studio at http://localhost:5555 and paste it in the User form. Hit enter and your information should pop up shortly!
 
