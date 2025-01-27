@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:17.2
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres:/var/lib/postgresql/data
+      
+  server:
+    container_name: server
+    build: ./server
+    depends_on:
+      - postgres
+    ports:
+      - "3001:3001"
+      - "5555:5555"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres
+    develop:
+      watch:
+        - action: sync
+          path: ./server
+          target: /app
+        - action: rebuild
+          path: package.json
+          target: /app
+      
+  client:
+    container_name: client
+    build: ./client
+    ports:
+      - "3000:3000"
+    develop:
+      watch:
+        - action: sync
+          path: ./client
+          target: /app
+        - action: rebuild
+          path: package.json
+          target: /app
+      
+volumes:
+  postgres:
