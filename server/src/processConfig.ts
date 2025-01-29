@@ -76,11 +76,13 @@ const processConfig = async (filePath: string): Promise<void> => {
          * If not possible, this logic will have to be updated to be able to
          * read lines until you actually reach the end of a piece of data. */
         const parts = line.split(' ');
-        console.log(parts);
         const desc = line.includes('description') ? line.split('description ')[1] : null;
         networkObjects.push({ name: parts[2] });
         if (parts[3] == "host") {
             hosts.push({objectNetwork: parts[2], host: parts[4], subnet: null, description: desc});
+        } else if (parts[3] == "subnet") {
+            const sn = line.split('description ')[0].split('subnet ')[1];
+            hosts.push({objectNetwork: parts[2], host: null, subnet: sn, description: desc});
         }
       
     } else if (line.trim().startsWith('host ')) {
