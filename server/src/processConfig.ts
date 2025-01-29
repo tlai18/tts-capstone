@@ -36,9 +36,10 @@
 import fs from 'fs';
 import readline from 'readline';
 import yargs, { nargs } from 'yargs';
-import { NetworkObject, Host, Prisma, PrismaClient } from '@prisma/client';
+import { NetworkObject, Host, Prisma, PrismaClient, PortGroup } from '@prisma/client';
 import { ObjectConfig } from './ObjectConfig';
 import { sourceMapsEnabled } from 'process';
+import { getSystemErrorMap } from 'util';
 
 const prisma = new PrismaClient();
 
@@ -57,9 +58,11 @@ const processConfig = async (filePath: string): Promise<void> => {
   let currentObject: ObjectConfig = {};
   let networkObjects: NetworkObject[] = [];
   let hosts: Host[] = [];
+  let portGroups: PortGroup[] = [];
 
   for await (const line of rl) {
-    if (line.startsWith('object network')) {
+    // Object definitions start with 'object network'
+    if (line.trim().startsWith('object network')) {
     //   if (currentObject.objectName) {
     //     console.log(currentObject);
     //     // const validObject = validateObjectConfig(currentObject);
@@ -85,9 +88,16 @@ const processConfig = async (filePath: string): Promise<void> => {
             hosts.push({objectNetwork: parts[2], host: null, subnet: sn, description: desc});
         }
       
-    } else if (line.trim().startsWith('host ')) {
-      const parts = line.trim().split(' ');
-      currentObject.ipAddress = parts[1];
+    } // Service definitions start with 'object-group service'
+    else if (line.trim().startsWith('object-group service')) {
+        const parts = line.split(' ');
+        const name = parts[2];
+        const protocol = parts[3];
+        if (parts[5] == 'range') {
+            portGroups.push({name: name, protocol: protocol, startPort: parts[6], endPort: parts[7]});
+        } else if (parts[5] == 'eq') {
+            portGroups.push({name: name, protocol: protocol, startPort: parts[6], endPort: null});
+        }
     } else if (line.trim().startsWith('subnet ')) {
       const parts = line.trim().split(' ');
       currentObject.networkAddress = parts[1];
@@ -101,11 +111,16 @@ const processConfig = async (filePath: string): Promise<void> => {
  
     if (args.action === 'populate') {
         // Insert all objects into the database
+        console.log(portGroups);
+        console.log(networkObjects);
         await prisma.networkObject.createMany({
             data: networkObjects,
         });
         await prisma.host.createMany({
             data: hosts,
+        });
+        await prisma.portGroup.createMany({
+            data: portGroups,
         });
     } else if (args.action === 'update') {
         // Update or insert all objects into the database
@@ -123,7 +138,14 @@ const processConfig = async (filePath: string): Promise<void> => {
                     update: { host: host.host, subnet: host.subnet, description: host.description },
                     create: { objectNetwork: host.objectNetwork, host: host.host, subnet: host.subnet, description: host.description },
                 })
-            )
+            ),
+            ...portGroups.map(portGroup =>
+                prisma.portGroup.upsert({
+                    where: { name: portGroup.name },
+                    update: { protocol: portGroup.protocol, startPort: portGroup.startPort, endPort: portGroup.endPort },
+                    create: { name: portGroup.name, protocol: portGroup.protocol, startPort: portGroup.startPort, endPort: portGroup.endPort },
+                })
+            ),
         ]);
     }
 };

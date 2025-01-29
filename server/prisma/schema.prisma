@@ -51,29 +51,31 @@ model NetGrouptoNetObj {
 
 }
 
-model Port {
+// model Port {
   
-  portName   String @id 
-  portGroups PortGrouptoPortObj[]
+//   portName   String @id 
+//   portGroups PortGrouptoPortObj[]
 
-} 
+// } 
 
 model PortGroup {
   
-  objectGroupService String @id
-  protocol           String
-  ports              PortGrouptoPortObj[]
+  name      String @id
+  protocol  String
+  //ports              PortGrouptoPortObj[]
+  startPort String
+  endPort   String?
   
 }
 
-model PortGrouptoPortObj {
+// model PortGrouptoPortObj {
 
-  portGroupId   String
-  portGroup     PortGroup @relation(fields: [portGroupId], references: [objectGroupService])
+//   portGroupId   String
+//   portGroup     PortGroup @relation(fields: [portGroupId], references: [objectGroupService])
   
-  portObjectId  String
-  portObject    Port @relation(fields: [portObjectId], references: [portName])
+//   portObjectId  String
+//   portObject    Port @relation(fields: [portObjectId], references: [portName])
 
-  @@id([portGroupId, portObjectId])
+//   @@id([portGroupId, portObjectId])
 
-}
+// }
