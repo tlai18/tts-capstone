@@ -24,9 +24,15 @@ model Host {
 
 } 
 
+enum NetworkObjectType {
+  HOST
+  PORT_GROUP
+}
+
 model NetworkObject {
   
   name String @id
+  type          NetworkObjectType
   networkGroups NetGrouptoNetObj[]
 
 }
@@ -36,7 +42,8 @@ model NetworkGroup {
   objectGroupNetwork String @id
   description String? 
   networkObjects NetGrouptoNetObj[]
-
+  childNetworkGroups NetGrouptoNetGroup[] @relation("NetworkGroupParent")
+  parentNetworkGroups NetGrouptoNetGroup[] @relation("NetworkGroupChild")
 }
 
 model NetGrouptoNetObj {
@@ -51,12 +58,15 @@ model NetGrouptoNetObj {
 
 }
 
-// model Port {
+model NetGrouptoNetGroup {
+  parentId     String
+  parentGroup  NetworkGroup @relation("NetworkGroupParent", fields: [parentId], references: [objectGroupNetwork])
   
-//   portName   String @id 
-//   portGroups PortGrouptoPortObj[]
+  childId      String
+  childGroup   NetworkGroup @relation("NetworkGroupChild", fields: [childId], references: [objectGroupNetwork])
 
-// } 
+  @@id([parentId, childId])
+}
 
 model PortGroup {
   
@@ -67,6 +77,13 @@ model PortGroup {
   endPort   String?
   
 }
+
+// model Port {
+  
+//   portName   String @id 
+//   portGroups PortGrouptoPortObj[]
+
+// } 
 
 // model PortGrouptoPortObj {
 

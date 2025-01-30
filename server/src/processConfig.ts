@@ -36,7 +36,7 @@
 import fs from 'fs';
 import readline from 'readline';
 import yargs, { nargs } from 'yargs';
-import { NetworkObject, Host, Prisma, PrismaClient, PortGroup } from '@prisma/client';
+import { NetworkObject, Host, Prisma, PrismaClient, PortGroup, NetworkObjectType, NetworkGroup, NetGrouptoNetObj, NetGrouptoNetGroup } from '@prisma/client';
 import { ObjectConfig } from './ObjectConfig';
 import { sourceMapsEnabled } from 'process';
 import { getSystemErrorMap } from 'util';
@@ -59,10 +59,13 @@ const processConfig = async (filePath: string): Promise<void> => {
   let networkObjects: NetworkObject[] = [];
   let hosts: Host[] = [];
   let portGroups: PortGroup[] = [];
+  let networkGroups: NetworkGroup[] = [];
+  let networkRelations: NetGrouptoNetObj[] = [];
+  let netGroupRelations: NetGrouptoNetGroup[] = [];
 
   for await (const line of rl) {
     // Object definitions start with 'object network'
-    if (line.trim().startsWith('object network')) {
+    if (line.startsWith('object network')) {
     //   if (currentObject.objectName) {
     //     console.log(currentObject);
     //     // const validObject = validateObjectConfig(currentObject);
@@ -78,30 +81,41 @@ const processConfig = async (filePath: string): Promise<void> => {
          * It would be preferable to have a single line per object.
          * If not possible, this logic will have to be updated to be able to
          * read lines until you actually reach the end of a piece of data. */
-        const parts = line.split(' ');
-        const desc = line.includes('description') ? line.split('description ')[1] : null;
-        networkObjects.push({ name: parts[2] });
+        const parts = line.trim().split(' ');
+        const desc = line.includes('description') ? line.trim().split('description ')[1] : null;
+        networkObjects.push({ name: parts[2], type: NetworkObjectType.HOST });
         if (parts[3] == "host") {
             hosts.push({objectNetwork: parts[2], host: parts[4], subnet: null, description: desc});
         } else if (parts[3] == "subnet") {
-            const sn = line.split('description ')[0].split('subnet ')[1];
+            const sn = line.trim().split('description ')[0].split('subnet ')[1];
             hosts.push({objectNetwork: parts[2], host: null, subnet: sn, description: desc});
         }
       
     } // Service definitions start with 'object-group service'
-    else if (line.trim().startsWith('object-group service')) {
-        const parts = line.split(' ');
+    else if (line.startsWith('object-group service')) {
+        const parts = line.trim().split(' ');
         const name = parts[2];
+        networkObjects.push({ name: name, type: NetworkObjectType.PORT_GROUP });
         const protocol = parts[3];
         if (parts[5] == 'range') {
             portGroups.push({name: name, protocol: protocol, startPort: parts[6], endPort: parts[7]});
         } else if (parts[5] == 'eq') {
             portGroups.push({name: name, protocol: protocol, startPort: parts[6], endPort: null});
         }
-    } else if (line.trim().startsWith('subnet ')) {
+    } // Group definitions start with 'object-group network'
+    else if (line.startsWith('object-group network')) {
       const parts = line.trim().split(' ');
-      currentObject.networkAddress = parts[1];
-      currentObject.subnetMask = parts[2];
+      const name = parts[2];
+      const desc = line.includes('description') ? line.trim().split('description ')[1] : null;
+      networkGroups.push({ objectGroupNetwork: name, description: desc });
+      const networks = line.trim().split(/(?=network-object object|group-object)/);
+      for (let i = 1; i < networks.length; i++) {
+        if (networks[i].includes('network-object object')) {
+          networkRelations.push({networkGroupId: name, networkObjectId: networks[i].split('network-object object ')[1].trim()});
+        } else if (networks[i].includes('group-object')) {
+          netGroupRelations.push({parentId: name, childId: networks[i].split('group-object ')[1].trim()});
+        }
+      }
     } else if (line.trim().startsWith('description ')) {
       currentObject.description = line.trim().substring(12);
     } else if (line.startsWith(' ')) {
@@ -111,25 +125,46 @@ const processConfig = async (filePath: string): Promise<void> => {
  
     if (args.action === 'populate') {
         // Insert all objects into the database
-        console.log(portGroups);
-        console.log(networkObjects);
-        await prisma.networkObject.createMany({
-            data: networkObjects,
-        });
-        await prisma.host.createMany({
-            data: hosts,
-        });
-        await prisma.portGroup.createMany({
-            data: portGroups,
-        });
+        await prisma.$transaction([
+            prisma.networkObject.createMany({
+                data: networkObjects,
+            }),
+            prisma.host.createMany({
+                data: hosts,
+            }),
+            prisma.portGroup.createMany({
+                data: portGroups,
+            }),
+            prisma.networkGroup.createMany({
+                data: networkGroups,
+            }),
+            prisma.netGrouptoNetObj.createMany({
+                data: networkRelations,
+            }),
+            prisma.netGrouptoNetGroup.createMany({
+                data: netGroupRelations,
+            }),
+        ]);
+        // Used to find what relation is causing an error
+        // await Promise.all(
+        //     networkRelations.map(async networkRelation => {
+        //     try {
+        //         return await prisma.netGrouptoNetObj.create({
+        //         data: { networkGroupId: networkRelation.networkGroupId, networkObjectId: networkRelation.networkObjectId },
+        //         });
+        //     } catch (error) {
+        //         console.error("Error inserting networkRelation:", networkRelation, error);
+        //     }
+        //     })
+        // );
     } else if (args.action === 'update') {
         // Update or insert all objects into the database
         await prisma.$transaction([
             ...networkObjects.map(networkObject =>
                 prisma.networkObject.upsert({
                     where: { name: networkObject.name },
-                    update: { },
-                    create: { name: networkObject.name },
+                    update: { type: networkObject.type },
+                    create: { name: networkObject.name, type: networkObject.type },
                 })
             ),
             ...hosts.map(host =>
@@ -144,6 +179,20 @@ const processConfig = async (filePath: string): Promise<void> => {
                     where: { name: portGroup.name },
                     update: { protocol: portGroup.protocol, startPort: portGroup.startPort, endPort: portGroup.endPort },
                     create: { name: portGroup.name, protocol: portGroup.protocol, startPort: portGroup.startPort, endPort: portGroup.endPort },
+                })
+            ),
+            ...networkGroups.map(networkGroup =>
+                prisma.networkGroup.upsert({
+                    where: { objectGroupNetwork: networkGroup.objectGroupNetwork },
+                    update: { description: networkGroup.description },
+                    create: { objectGroupNetwork: networkGroup.objectGroupNetwork, description: networkGroup.description },
+                })
+            ),
+            ...networkRelations.map(networkRelation =>
+                prisma.netGrouptoNetObj.upsert({
+                    where: { networkGroupId_networkObjectId: { networkGroupId: networkRelation.networkGroupId, networkObjectId: networkRelation.networkObjectId } },
+                    update: {},
+                    create: { networkGroupId: networkRelation.networkGroupId, networkObjectId: networkRelation.networkObjectId },
                 })
             ),
         ]);
