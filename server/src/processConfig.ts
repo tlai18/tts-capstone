@@ -145,18 +145,6 @@ const processConfig = async (filePath: string): Promise<void> => {
                 data: netGroupRelations,
             }),
         ]);
-        // Used to find what relation is causing an error
-        // await Promise.all(
-        //     networkRelations.map(async networkRelation => {
-        //     try {
-        //         return await prisma.netGrouptoNetObj.create({
-        //         data: { networkGroupId: networkRelation.networkGroupId, networkObjectId: networkRelation.networkObjectId },
-        //         });
-        //     } catch (error) {
-        //         console.error("Error inserting networkRelation:", networkRelation, error);
-        //     }
-        //     })
-        // );
     } else if (args.action === 'update') {
         // Update or insert all objects into the database
         await prisma.$transaction([
@@ -193,6 +181,13 @@ const processConfig = async (filePath: string): Promise<void> => {
                     where: { networkGroupId_networkObjectId: { networkGroupId: networkRelation.networkGroupId, networkObjectId: networkRelation.networkObjectId } },
                     update: {},
                     create: { networkGroupId: networkRelation.networkGroupId, networkObjectId: networkRelation.networkObjectId },
+                })
+            ),
+            ...netGroupRelations.map(netGroupRelation =>
+                prisma.netGrouptoNetGroup.upsert({
+                    where: { parentId_childId: { parentId: netGroupRelation.parentId, childId: netGroupRelation.childId } },
+                    update: {},
+                    create: { parentId: netGroupRelation.parentId, childId: netGroupRelation.childId },
                 })
             ),
         ]);
