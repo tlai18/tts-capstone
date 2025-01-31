@@ -87,6 +87,9 @@ app.post('/getData', async (req: Request, res: Response) => {
     });
   
     res.set('Access-Control-Allow-Origin', 'http://localhost:3000'); // change this for final domain
+    res.set('Access-Control-Allow-Methods', 'POST');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+  
     res.json(hosts);
 });
 
