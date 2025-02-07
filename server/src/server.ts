@@ -83,18 +83,22 @@ app.get('/', (req: Request, res: Response) => {
 // Fetch Data from IP
 app.post('/getData', async (req: Request, res: Response) => {
     const ip = req.body.ip;
-    
+
     if (ip === undefined) {
         res.status(400).send("Bad Request: IP address is required in JSON format");
         return;
     }
-    
+  
     const hosts = await prisma.host.findMany({
         where: {
             host: ip,
         },
     });
-    
+  
+    res.set('Access-Control-Allow-Origin', 'http://localhost:3000'); // change this for final domain
+    res.set('Access-Control-Allow-Methods', 'POST');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+  
     res.json(hosts);
 });
 
