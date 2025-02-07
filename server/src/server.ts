@@ -3,9 +3,18 @@ import { PrismaClient } from '@prisma/client';
 
 const app = express();
 const prisma = new PrismaClient();
+const cors = require('cors');
 
 // Middleware to parse JSON bodies
 app.use(express.json());
+
+const corsOptions = {
+    origin: 'http://localhost:3000', 
+    methods: 'GET,POST', 
+    allowedHeaders: ['Content-Type', 'Authorization'] 
+};
+
+app.use(cors(corsOptions));
 
 // Simulated Shibboleth login route
 app.get('/auth/login', (req: Request, res: Response) => {
@@ -74,6 +83,11 @@ app.get('/', (req: Request, res: Response) => {
 // Fetch Data from IP
 app.post('/getData', async (req: Request, res: Response) => {
     const ip = req.body.ip;
+    
+    if (ip === undefined) {
+        res.status(400).send("Bad Request: IP address is required in JSON format");
+        return;
+    }
     
     const hosts = await prisma.host.findMany({
         where: {
