@@ -36,7 +36,7 @@
 import fs from 'fs';
 import readline from 'readline';
 import yargs, { nargs } from 'yargs';
-import { NetworkObject, Host, Prisma, PrismaClient, PortGroup, NetworkObjectType, NetworkGroup, NetGrouptoNetObj, NetGrouptoNetGroup } from '@prisma/client';
+import { NetworkObject, Host, Prisma, PrismaClient, PortGroup, NetworkGroupType, NetworkGroup, NetGrouptoNetObj, NetGrouptoNetGroup, Rule, RuleGroup, Remark, RuleToNetworkGroup, RuleToNetworkObject } from '@prisma/client';
 import { ObjectConfig } from './ObjectConfig';
 import { sourceMapsEnabled } from 'process';
 import { getSystemErrorMap } from 'util';
@@ -62,6 +62,11 @@ const processConfig = async (filePath: string): Promise<void> => {
   let networkGroups: NetworkGroup[] = [];
   let networkRelations: NetGrouptoNetObj[] = [];
   let netGroupRelations: NetGrouptoNetGroup[] = [];
+  let ruleGroups: Map<number, RuleGroup> = new Map();
+  let rules: Rule[] = [];
+  let remarks: Remark[] = [];
+  let ruleNetworks: Map<String, RuleToNetworkObject> = new Map();
+  let ruleNetworkGroups: Map<String, RuleToNetworkGroup> = new Map();
 
   for await (const line of rl) {
     // Object definitions start with 'object network'
@@ -83,7 +88,7 @@ const processConfig = async (filePath: string): Promise<void> => {
          * read lines until you actually reach the end of a piece of data. */
         const parts = line.trim().split(' ');
         const desc = line.includes('description') ? line.trim().split('description ')[1] : null;
-        networkObjects.push({ name: parts[2], type: NetworkObjectType.HOST });
+        networkObjects.push({ name: parts[2]});
         if (parts[3] == "host") {
             hosts.push({objectNetwork: parts[2], host: parts[4], subnet: null, description: desc});
         } else if (parts[3] == "subnet") {
@@ -91,11 +96,11 @@ const processConfig = async (filePath: string): Promise<void> => {
             hosts.push({objectNetwork: parts[2], host: null, subnet: sn, description: desc});
         }
       
-    } // Service definitions start with 'object-group service'
+    } // Service definitions (port groups) start with 'object-group service'
     else if (line.startsWith('object-group service')) {
         const parts = line.trim().split(' ');
         const name = parts[2];
-        networkObjects.push({ name: name, type: NetworkObjectType.PORT_GROUP });
+        networkGroups.push({ objectGroupNetwork: name, description: null, type: NetworkGroupType.PORTS });
         const protocol = parts[3];
         if (parts[5] == 'range') {
             portGroups.push({name: name, protocol: protocol, startPort: parts[6], endPort: parts[7]});
@@ -107,7 +112,7 @@ const processConfig = async (filePath: string): Promise<void> => {
       const parts = line.trim().split(' ');
       const name = parts[2];
       const desc = line.includes('description') ? line.trim().split('description ')[1] : null;
-      networkGroups.push({ objectGroupNetwork: name, description: desc });
+      networkGroups.push({ objectGroupNetwork: name, description: desc, type: NetworkGroupType.HOSTS });
       const networks = line.trim().split(/(?=network-object object|group-object)/);
       for (let i = 1; i < networks.length; i++) {
         if (networks[i].includes('network-object object')) {
@@ -116,12 +121,34 @@ const processConfig = async (filePath: string): Promise<void> => {
           netGroupRelations.push({parentId: name, childId: networks[i].split('group-object ')[1].trim()});
         }
       }
-    } else if (line.trim().startsWith('description ')) {
-      currentObject.description = line.trim().substring(12);
-    } else if (line.startsWith(' ')) {
+    } // Firewall rule definitions start with 'access-list CSM_FW_ACL_ advanced'
+    else if (line.trim().startsWith('access-list CSM_FW_ACL_ advanced')) {
+      const ruleGroupId = parseInt(line.split('rule-id ')[1].split(' ')[0]);
+      ruleGroups.set(ruleGroupId, {ruleGroupId: ruleGroupId});
+      const parts = line.trim().split(' ');
+      const ruleType = parts[3];
+      const protocol = parts[4];
+      rules.push({ruleGroupId: ruleGroupId, ruleType: ruleType, protocol: protocol, ruleBody: line.trim()});
+      const networks = line.trim().split(/(?=object-group|object)/);
+      for (let i = 1; i < networks.length; i++) {
+        if (networks[i].includes('object-group')) {
+          const networkGroupId = networks[i].split(' ')[1].trim();
+          ruleNetworkGroups.set(`${ruleGroupId}-${networkGroupId}`, {ruleGroupId: ruleGroupId, networkGroupId: networkGroupId});
+        } else if (networks[i].includes('object')) {
+          const networkObjectId = networks[i].split(' ')[1].trim();
+          ruleNetworks.set(`${ruleGroupId}-${networkObjectId}`, {ruleGroupId: ruleGroupId, networkObjectId: networkObjectId});
+        }
+      }
+    } // Firewall rule remarks start with 'access-list CSM_FW_ACL_ remark'
+    else if (line.startsWith(' ')) {
       // Handle additional configuration details that start with a space
     }
   }
+  
+    
+  const ruleGroupsArray = Array.from(ruleGroups.values());
+  const ruleNetworkGroupsArray = Array.from(ruleNetworkGroups.values());
+  const ruleNetworksArray = Array.from(ruleNetworks.values());
  
     if (args.action === 'populate') {
         // Insert all objects into the database
@@ -144,15 +171,29 @@ const processConfig = async (filePath: string): Promise<void> => {
             prisma.netGrouptoNetGroup.createMany({
                 data: netGroupRelations,
             }),
+            prisma.ruleGroup.createMany({
+                data: ruleGroupsArray,
+            }),
+            prisma.rule.createMany({
+                data: rules,
+            }),
+            prisma.ruleToNetworkGroup.createMany({
+                data: ruleNetworkGroupsArray,
+            }),
+            prisma.ruleToNetworkObject.createMany({
+                data: ruleNetworksArray,
+            }),
         ]);
+
+        
     } else if (args.action === 'update') {
         // Update or insert all objects into the database
         await prisma.$transaction([
             ...networkObjects.map(networkObject =>
                 prisma.networkObject.upsert({
                     where: { name: networkObject.name },
-                    update: { type: networkObject.type },
-                    create: { name: networkObject.name, type: networkObject.type },
+                    update: {},
+                    create: { name: networkObject.name},
                 })
             ),
             ...hosts.map(host =>
@@ -173,7 +214,7 @@ const processConfig = async (filePath: string): Promise<void> => {
                 prisma.networkGroup.upsert({
                     where: { objectGroupNetwork: networkGroup.objectGroupNetwork },
                     update: { description: networkGroup.description },
-                    create: { objectGroupNetwork: networkGroup.objectGroupNetwork, description: networkGroup.description },
+                    create: { objectGroupNetwork: networkGroup.objectGroupNetwork, description: networkGroup.description, type: networkGroup.type },
                 })
             ),
             ...networkRelations.map(networkRelation =>
@@ -188,6 +229,34 @@ const processConfig = async (filePath: string): Promise<void> => {
                     where: { parentId_childId: { parentId: netGroupRelation.parentId, childId: netGroupRelation.childId } },
                     update: {},
                     create: { parentId: netGroupRelation.parentId, childId: netGroupRelation.childId },
+                })
+            ),
+            ...ruleGroupsArray.map(ruleGroup =>
+                prisma.ruleGroup.upsert({
+                    where: { ruleGroupId: ruleGroup.ruleGroupId },
+                    update: {},
+                    create: { ruleGroupId: ruleGroup.ruleGroupId },
+                })
+            ),
+            ...rules.map(rule =>
+                prisma.rule.upsert({
+                    where: { ruleBody: rule.ruleBody },
+                    update: {},
+                    create: { ruleGroupId: rule.ruleGroupId, ruleType: rule.ruleType, protocol: rule.protocol, ruleBody: rule.ruleBody },
+                })
+            ),
+            ...ruleNetworkGroupsArray.map(ruleNetworkGroup =>
+                prisma.ruleToNetworkGroup.upsert({
+                    where: { ruleGroupId_networkGroupId: { ruleGroupId: ruleNetworkGroup.ruleGroupId, networkGroupId: ruleNetworkGroup.networkGroupId } },
+                    update: {},
+                    create: { ruleGroupId: ruleNetworkGroup.ruleGroupId, networkGroupId: ruleNetworkGroup.networkGroupId },
+                })
+            ),
+            ...ruleNetworksArray.map(ruleNetwork =>
+                prisma.ruleToNetworkObject.upsert({
+                    where: { ruleGroupId_networkObjectId: { ruleGroupId: ruleNetwork.ruleGroupId, networkObjectId: ruleNetwork.networkObjectId } },
+                    update: {},
+                    create: { ruleGroupId: ruleNetwork.ruleGroupId, networkObjectId: ruleNetwork.networkObjectId },
                 })
             ),
         ]);
