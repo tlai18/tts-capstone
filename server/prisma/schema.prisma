@@ -24,19 +24,27 @@ model Host {
 
 } 
 
+enum NetworkGroupType {
+  HOSTS
+  PORTS
+}
+
 model NetworkObject {
   
   name String @id
   networkGroups NetGrouptoNetObj[]
-
+  rules         RuleToNetworkObject[]
 }
 
 model NetworkGroup {
   
-  objectGroupNetwork String @id
-  description String? 
-  networkObjects NetGrouptoNetObj[]
-
+  objectGroupNetwork    String @id
+  description           String? 
+  type                  NetworkGroupType
+  networkObjects        NetGrouptoNetObj[]
+  childNetworkGroups    NetGrouptoNetGroup[] @relation("NetworkGroupParent")
+  parentNetworkGroups   NetGrouptoNetGroup[] @relation("NetworkGroupChild")
+  rules                 RuleToNetworkGroup[]
 }
 
 model NetGrouptoNetObj {
@@ -45,35 +53,94 @@ model NetGrouptoNetObj {
   networkGroup   NetworkGroup @relation(fields: [networkGroupId], references: [objectGroupNetwork])
   
   networkObjectId String
-  networkObject  NetworkObject @relation(fields: [networkObjectId], references: [name])
+  networkObject   NetworkObject @relation(fields: [networkObjectId], references: [name])
 
   @@id([networkGroupId, networkObjectId])
 
 }
 
-model Port {
+model NetGrouptoNetGroup {
+  parentId     String
+  parentGroup  NetworkGroup @relation("NetworkGroupParent", fields: [parentId], references: [objectGroupNetwork])
   
-  portName   String @id 
-  portGroups PortGrouptoPortObj[]
+  childId      String
+  childGroup   NetworkGroup @relation("NetworkGroupChild", fields: [childId], references: [objectGroupNetwork])
 
-} 
+  @@id([parentId, childId])
+}
 
 model PortGroup {
   
-  objectGroupService String @id
-  protocol           String
-  ports              PortGrouptoPortObj[]
+  name      String @id
+  protocol  String
+  //ports              PortGrouptoPortObj[]
+  startPort String
+  endPort   String?
+  
   
 }
 
-model PortGrouptoPortObj {
-
-  portGroupId   String
-  portGroup     PortGroup @relation(fields: [portGroupId], references: [objectGroupService])
-  
-  portObjectId  String
-  portObject    Port @relation(fields: [portObjectId], references: [portName])
-
-  @@id([portGroupId, portObjectId])
-
+model RuleGroup {
+    
+    ruleGroupId  Int @id
+    networkObjects  RuleToNetworkObject[]
+    networkGroups   RuleToNetworkGroup[]
+    rules   Rule[]
+    remarks Remark[]
 }
+
+model Rule {
+    protocol        String
+    ruleType        String
+    ruleBody        String @id
+    ruleGroup       RuleGroup @relation(fields: [ruleGroupId], references: [ruleGroupId])
+    ruleGroupId     Int
+    
+}
+
+model RuleToNetworkObject {
+  ruleGroupId Int
+  rule   RuleGroup @relation(fields: [ruleGroupId], references: [ruleGroupId])
+  
+  networkObjectId String
+  networkObject   NetworkObject @relation(fields: [networkObjectId], references: [name])
+
+  @@id([ruleGroupId, networkObjectId])
+}
+
+model RuleToNetworkGroup {
+  ruleGroupId Int
+  rule   RuleGroup @relation(fields: [ruleGroupId], references: [ruleGroupId])
+  
+  networkGroupId String
+  networkGroup   NetworkGroup @relation(fields: [networkGroupId], references: [objectGroupNetwork])
+
+  @@id([ruleGroupId, networkGroupId])
+}
+
+model Remark {
+    remark      String
+    ruleGroup   RuleGroup @relation(fields: [ruleGroupId], references: [ruleGroupId])
+    ruleGroupId Int
+    
+    @@id([remark, ruleGroupId])
+}
+
+// model Port {
+  
+//   portName   String @id 
+//   portGroups PortGrouptoPortObj[]
+
+// } 
+
+// model PortGrouptoPortObj {
+
+//   portGroupId   String
+//   portGroup     PortGroup @relation(fields: [portGroupId], references: [objectGroupService])
+  
+//   portObjectId  String
+//   portObject    Port @relation(fields: [portObjectId], references: [portName])
+
+//   @@id([portGroupId, portObjectId])
+
+// }
