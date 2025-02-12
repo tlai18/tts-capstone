@@ -5,7 +5,7 @@
 1. Download [Docker Desktop](https://docs.docker.com/get-started/get-docker/)
 2. Run `docker compose up --watch` from the root directory to start the server, database, and interface.
 3. To use the terminal for the server, run `docker exec -it server sh`.
-4. Inside the server terminal, run `npx prisma studio` to view the database studio or `npx prisma db push --force-reset && npx prisma db seed src/firewall-config-raw-edit` to import the sample file.
+4. Inside the server terminal, run `npx prisma studio` to view the database studio or `npx prisma db push --force-reset && npx prisma db seed src/sample.txt` to import the sample file.
 
 # Project Setup Guide
 
