@@ -107,6 +107,12 @@ const processConfig = async (filePath: string): Promise<void> => {
         } else if (parts[5] == 'eq') {
             portGroups.push({name: name, protocol: protocol, startPort: parts[6], endPort: null});
         }
+        if (line.includes('group-object')) {
+            const ports = line.trim().split(/(?=group-object)/);
+            for (let i = 1; i < ports.length; i++) {
+                netGroupRelations.push({parentId: name, childId: ports[i].split('group-object ')[1].trim()});
+            }
+        }
     } // Group definitions start with 'object-group network'
     else if (line.startsWith('object-group network')) {
       const parts = line.trim().split(' ');
