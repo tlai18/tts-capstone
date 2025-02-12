@@ -119,10 +119,11 @@ model RuleToNetworkGroup {
 }
 
 model Remark {
-    id          Int @id @default(autoincrement())
     remark      String
     ruleGroup   RuleGroup @relation(fields: [ruleGroupId], references: [ruleGroupId])
     ruleGroupId Int
+    
+    @@id([remark, ruleGroupId])
 }
 
 // model Port {

@@ -146,15 +146,26 @@ const processConfig = async (filePath: string): Promise<void> => {
         }
       }
     } // Firewall rule remarks start with 'access-list CSM_FW_ACL_ remark'
-    else if (line.startsWith(' ')) {
-      // Handle additional configuration details that start with a space
+    else if (line.startsWith('access-list CSM_FW_ACL_ remark')) {
+      const body = line.trim().split('rule-id ')[1];
+      const idx = body.indexOf(':');
+      const ruleId = parseInt(body.substring(0, idx));
+      const remark = body.substring(idx + 1).trim();
+      remarks.push({ruleGroupId: ruleId, remark: remark});
     }
   }
   
     
-  const ruleGroupsArray = Array.from(ruleGroups.values());
-  const ruleNetworkGroupsArray = Array.from(ruleNetworkGroups.values());
-  const ruleNetworksArray = Array.from(ruleNetworks.values());
+    const ruleGroupsArray = Array.from(ruleGroups.values());
+    const ruleNetworkGroupsArray = Array.from(ruleNetworkGroups.values());
+    const ruleNetworksArray = Array.from(ruleNetworks.values());
+    const filteredRemarks = remarks.filter(remark => {
+        if (!ruleGroups.has(remark.ruleGroupId)) {
+            console.error(`No rule with id ${remark.ruleGroupId}. Remark \"${remark.remark}\" can't be added.`);
+            return false;
+        }
+        return true;
+    });
  
     if (args.action === 'populate') {
         // Insert all objects into the database
@@ -189,8 +200,11 @@ const processConfig = async (filePath: string): Promise<void> => {
             prisma.ruleToNetworkObject.createMany({
                 data: ruleNetworksArray,
             }),
+            prisma.remark.createMany({
+                data: filteredRemarks,
+            }),
         ]);
-
+        
         
     } else if (args.action === 'update') {
         // Update or insert all objects into the database
@@ -263,6 +277,13 @@ const processConfig = async (filePath: string): Promise<void> => {
                     where: { ruleGroupId_networkObjectId: { ruleGroupId: ruleNetwork.ruleGroupId, networkObjectId: ruleNetwork.networkObjectId } },
                     update: {},
                     create: { ruleGroupId: ruleNetwork.ruleGroupId, networkObjectId: ruleNetwork.networkObjectId },
+                })
+            ),
+            ...filteredRemarks.map(remark =>
+                prisma.remark.upsert({
+                    where: { remark_ruleGroupId: { ruleGroupId: remark.ruleGroupId, remark: remark.remark } },
+                    update: { remark: remark.remark },
+                    create: { ruleGroupId: remark.ruleGroupId, remark: remark.remark },
                 })
             ),
         ]);
