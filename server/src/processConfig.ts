@@ -35,17 +35,22 @@
 
 import fs from 'fs';
 import readline from 'readline';
+import csv from 'csv-parser';
 import yargs, { nargs } from 'yargs';
-import { NetworkObject, Host, Prisma, PrismaClient, PortGroup, NetworkGroupType, NetworkGroup, NetGrouptoNetObj, NetGrouptoNetGroup, Rule, RuleGroup, Remark, RuleToNetworkGroup, RuleToNetworkObject } from '@prisma/client';
+import { NetworkObject, Host, Prisma, PrismaClient, PortGroup, NetworkGroupType, NetworkGroup, NetGrouptoNetObj, NetGrouptoNetGroup, Rule, RuleGroup, Remark, RuleToNetworkGroup, RuleToNetworkObject, Owner } from '@prisma/client';
 import { ObjectConfig } from './ObjectConfig';
 import { sourceMapsEnabled } from 'process';
 import { getSystemErrorMap } from 'util';
+import { resolve } from 'path';
+import { rejects } from 'assert';
 
 const prisma = new PrismaClient();
 
 const processConfig = async (filePath: string): Promise<void> => {
+  // Add owners to database
+  const ipOwners = await insertOwners();
     
-  // Validate and reformat the file if necessary
+  // Validate and reformat the firewall rules file if necessary
   const [reformatted, formattedPath] = await validateReformatFile(filePath);
   console.log(formattedPath);
   const fileStream = fs.createReadStream(formattedPath);
@@ -71,29 +76,14 @@ const processConfig = async (filePath: string): Promise<void> => {
   for await (const line of rl) {
     // Object definitions start with 'object network'
     if (line.startsWith('object network')) {
-    //   if (currentObject.objectName) {
-    //     console.log(currentObject);
-    //     // const validObject = validateObjectConfig(currentObject);
-    //     // if (validObject) {
-    //     //   objects.push(validObject);
-    //     // }
-        
-    //   }
-    //   currentObject = { type: 'Network' };
-    //   currentObject.objectName = parts[2];
-    
-        /* Currently, a single piece of data can span multiple lines.
-         * It would be preferable to have a single line per object.
-         * If not possible, this logic will have to be updated to be able to
-         * read lines until you actually reach the end of a piece of data. */
         const parts = line.trim().split(' ');
         const desc = line.includes('description') ? line.trim().split('description ')[1] : null;
         networkObjects.push({ name: parts[2]});
         if (parts[3] == "host") {
-            hosts.push({objectNetwork: parts[2], host: parts[4], subnet: null, description: desc});
+            hosts.push({objectNetwork: parts[2], host: parts[4], subnet: null, description: desc, ownerName: ipOwners.get(parts[4]) || null});
         } else if (parts[3] == "subnet") {
             const sn = line.trim().split('description ')[0].split('subnet ')[1];
-            hosts.push({objectNetwork: parts[2], host: null, subnet: sn, description: desc});
+            hosts.push({objectNetwork: parts[2], host: null, subnet: sn, description: desc, ownerName: null});
         }
       
     } // Service definitions (port groups) start with 'object-group service'
@@ -334,13 +324,48 @@ async function validateReformatFile(filePath: string): Promise<[boolean, string]
     return [reformatted, outputPath];
 }
 
-const insertObject = async (data: ObjectConfig, table: String): Promise<void> => {
+async function insertObject (data: ObjectConfig, table: String): Promise<void> {
   try {
     console.log("Attempting to insert:", data);
   } catch (error) {
     console.error("Error inserting object:", data, error);
   }
 };
+
+const insertOwners = async(): Promise<Map<string, string>> => {
+    const ipsOwners = new Map<string, string>();
+    const owners = new Map<string, Owner>();
+    let prevName: string | null = null;
+    
+    return new Promise((resolve, reject) => {
+        fs.createReadStream(args.owners)
+            .pipe(csv(['name', 'email', 'ip']))
+            .on('data', async (row) => {
+                if (row.name && row.email) {
+                    prevName = row.name.trim();
+                    owners.set(row.name.trim(), {name: row.name.trim(), email: row.email.trim()});
+                } 
+                if (prevName) {
+                    ipsOwners.set(row.ip.trim(), prevName);
+                }
+            })
+            .on('end', () => {
+                console.log('Owners CSV file successfully processed');
+                prisma.owner.createMany({
+                    data: Array.from(owners.values())
+                }).then(() => {
+                    console.log('Owners added to the database');
+                }).catch((error) => {
+                    console.error('Error adding owners to the database: ', error);
+                });
+                resolve(ipsOwners);
+            })
+            .on('error', (error) => {
+                console.error('Error processing owners CSV file:', error);
+                reject(error);
+            });
+        });
+}
 
 // Read the file path from the command line arguments
 // const filePath = process.argv[2];
@@ -371,6 +396,13 @@ const args = yargs(process.argv.slice(2))
             describe: 'Path to the firewall configuration file',
             type: 'string',
             demandOption: 'Please provide the path to the firewall configuration file.',
+            nargs: 1,
+        },
+        'owners': {
+            alias: 'o',
+            describe: 'Path to the owners CSV file',
+            type: 'string',
+            demandOption: 'Please provide the path to the owners CSV file.',
             nargs: 1,
         }
     })

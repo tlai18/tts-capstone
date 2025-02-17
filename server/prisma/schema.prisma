@@ -15,13 +15,21 @@ generator client {
   seed            = "seed.ts"
 }
 
+model Owner {
+    name    String @id
+    email   String
+    hosts   Host[]
+}
+
 model Host {
   
   objectNetwork String @id
   host          String?
-  subnet        String?  //double check this  
+  subnet        String? 
   description   String?
-
+  networkObject NetworkObject @relation(fields: [objectNetwork], references: [name])
+  owner         Owner? @relation(fields: [ownerName], references: [name])
+  ownerName     String?
 } 
 
 enum NetworkGroupType {
@@ -31,7 +39,8 @@ enum NetworkGroupType {
 
 model NetworkObject {
   
-  name String @id
+  name          String @id
+  host          Host? 
   networkGroups NetGrouptoNetObj[]
   rules         RuleToNetworkObject[]
 }

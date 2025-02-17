@@ -8,7 +8,7 @@
     "start:server": "ts-node src/server.ts"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts -a populate -f"
+    "seed": "ts-node prisma/seed.ts -a populate -o src/owners.csv -f"
   },
   "keywords": [],
   "author": "",
@@ -28,6 +28,7 @@
     "@types/yargs": "^17.0.33",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
+    "csv-parser": "^3.2.0",
     "express": "^4.21.2",
     "express-session": "^1.18.1",
     "mongodb": "^6.10.0",
