@@ -1,32 +1,45 @@
-import React from 'react'
+import React from 'react';
 import { Host } from '../types/Host';
-import 'bootstrap/dist/css/bootstrap.min.css';
 
 interface Props {
     ips: Host[];
+    onSelect: (host: Host) => void;
+    selectedHost: Host | null;
 }
 
-const DataList: React.FC<Props> = ({ips}) => {
-  return (
-    <table className="table" style={{width: "40%"}}>
-        <thead className="thead-light">
-            <tr>
-                <th>Host</th>
-                <th>Network Object</th>
-                <th>Description</th>
-            </tr>
-        </thead>
-        <tbody>
-            {ips.map((ip) => (
-                <tr>
-                    <td>{ip.host}</td>
-                    <td>{ip.objectNetwork}</td>
-                    <td>{ip.description}</td>
-                </tr>
-            ))}
-        </tbody>
-    </table>
-  )
-}
+const DataList: React.FC<Props> = ({ ips, onSelect, selectedHost }) => {
+    return (
+        <div className="container">
+            <h3 className="text-primary">Available Hosts</h3>
+            <table className="table table-hover shadow-sm" style={{ backgroundColor: '#ffffff', borderRadius: '8px', overflow: 'hidden' }}>
+                <thead className="bg-primary text-white">
+                    <tr>
+                        <th scope="col">Host</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {ips
+                        .filter(ip => ip.host) // Ensure no undefined hosts
+                        .map((ip, index) => (
+                            <tr 
+                                key={index} 
+                                onClick={() => onSelect(ip)} 
+                                style={{ 
+                                    cursor: 'pointer', 
+                                    transition: '0.3s', 
+                                    backgroundColor: selectedHost?.host === ip.host ? '#007bff' : 'white',
+                                    color: selectedHost?.host === ip.host ? 'white' : 'black',
+                                    fontWeight: selectedHost?.host === ip.host ? 'bold' : 'normal'
+                                }} 
+                                className="hover-effect"
+                            >
+                                <td>{ip.host}</td>
+                            </tr>
+                        ))}
+                </tbody>
+            </table>
+        </div>
+    );
+};
 
-export default DataList
+export default DataList;

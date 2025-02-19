@@ -98,6 +98,16 @@ app.post('/getData', async (req: Request, res: Response) => {
     res.json(hosts);
 });
 
+app.post('/getAllData', async (req: Request, res: Response) => {
+  try {
+      const hosts = await prisma.host.findMany(); // Fetch all records
+      res.json(hosts);
+  } catch (error) {
+      console.error('Error fetching hosts:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 // Start the Express server
 const PORT = 3001;
 app.listen(PORT, () => {
