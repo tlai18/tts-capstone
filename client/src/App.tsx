@@ -3,6 +3,7 @@ import axios from 'axios';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import Login from './pages/Login';
 import Proof from './pages/Proof';
+import Testing from './pages/Testing';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<{ email: string; name: string } | null>(null);
@@ -51,6 +52,8 @@ const App: React.FC = () => {
           />
           <Route path="/auth/login" element={<Login />} />
           <Route path="/proof" element={<Proof />} />
+          <Route path="/testing" element={<Testing />} />
+
         </Routes>
       </div>
     </Router>

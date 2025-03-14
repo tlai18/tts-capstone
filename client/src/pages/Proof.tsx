@@ -4,6 +4,7 @@ import DataList from '../components/DataList';
 import HostDetails from '../components/HostDetails';
 import { Host } from '../types/Host';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import RuleGroupDisplay from '../components/RuleGroupDisplay';
 
 const Proof: React.FC = () => {
     const [ips, setIPs] = useState<Host[]>([]);
@@ -89,6 +90,7 @@ const Proof: React.FC = () => {
                         {/* Right: Host Details */}
                         <div className="p-3" style={{ flex: 1 }}>
                             {selectedHost ? <HostDetails host={selectedHost} /> : <p className="text-muted">Select a host to see details</p>}
+                            <RuleGroupDisplay/>
                         </div>
                     </div>
                 </>
