@@ -107,6 +107,7 @@ app.post('/getAllData', async (req: Request, res: Response) => {
       res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
 app.get('/ruleGroupsByHost', async (req: Request, res: Response) => {
   const { host } = req.query; // Extract the host from query parameters
 
@@ -155,6 +156,7 @@ app.get('/ruleGroupsByHost', async (req: Request, res: Response) => {
         parentNetworkGroups: true,
       }
     });
+    
     // Add all the RuleGroups that contain the NetworkGroups which directly contain the NetworkObject
     for (const networkGroup of directNetworkGroups) {
       for (const rule of networkGroup.rules) {
@@ -179,64 +181,71 @@ app.get('/ruleGroupsByHost', async (req: Request, res: Response) => {
       
       if (!networkGroup) {
         res.status(404).json({ error: `Invalid NetworkGroup ID: ${networkGroupId}` });
-        return; // Ensure the function exits after sending the response
+        return; 
       }
-      
-
 
       // Add all the RuleGroups that contain NetworkGroups which indirectly contain the NetworkObject
-      // for (const networkGroup of networkGroups) {
-        for (const rule of networkGroup.rules) {
-          ruleGroups.add(rule.ruleGroupId);
+      for (const rule of networkGroup.rules) {
+        ruleGroups.add(rule.ruleGroupId);
+      }
+    
+      for (const parentNetworkGroup of networkGroup.parentNetworkGroups) {
+        if (!networkGroupsSet.has(parentNetworkGroup.parentId)) {
+          networkGroupsSet.add(parentNetworkGroup.parentId);
+          getParentNetworkGroups(parentNetworkGroup.parentId);
         }
-        
-        for (const parentNetworkGroup of networkGroup.parentNetworkGroups) {
-      
-          if (!networkGroupsSet.has(parentNetworkGroup.parentId)) {
-            networkGroupsSet.add(parentNetworkGroup.parentId);
-            getParentNetworkGroups(parentNetworkGroup.parentId);
-          }
-        }
-      // }
+      }
     }
-
-    // const parentNetworkGroups = await prisma.networkGroup.findMany({
-    //   where: {
-    //     networkObjects: {
-    //       some: {
-    //           networkObjectId: { equals: networkObject.name, },
-    //       },
-    //     },
-    //   },
-    //   include: {
-    //     rules: true,
-    //   }
-    // });
-
-    // Step 2: Find all RuleGroups associated with the NetworkObject
-    // const ruleGroups = await prisma.ruleGroup.findMany({
-      // where: {
-      //   networkObjects: {
-      //     some: {
-      //         networkObjectId: { equals: networkObject.name, },
-      //     },
-      //   },
-      //   networkGroups: {
-      //     some: {
-      //       networkObjectId: { equals: networkObject.name, },
-      //     }
-      //   }
-      // },
-      // include: {
-      //   rules: true, // Include related rules in the response
-      // },
-    // });
 
     res.json(Array.from(ruleGroups)); // Send the response without returning it
   } catch (error) {
     console.error('Error fetching RuleGroups:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
+});
+
+app.get('/getRemarks', async (req: Request, res: Response) => {
+    const { ruleGroupId } = req.query; 
+    
+    if (!ruleGroupId) {
+        res.status(400).json({ error: 'RuleGroupId parameter is required' });
+        return; 
+    }
+    
+    try {
+        const remarks = await prisma.remark.findMany({
+            where: {
+                ruleGroupId: parseInt(ruleGroupId as string),
+            },
+        });
+        res.json(remarks);
+    } catch (error) {
+        console.error('Error fetching Remarks:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+    
+});
+
+app.get('/getRules', async (req: Request, res: Response) => {
+   const { ruleGroupId } = req.query; 
+   
+    if (!ruleGroupId) {
+         res.status(400).json({ error: 'RuleGroupId parameter is required' });
+         return; 
+    }
+    
+    try {
+        const rules = await prisma.rule.findMany({
+            where: {
+                ruleGroupId: parseInt(ruleGroupId as string),
+            },
+        });
+        res.json(rules);
+    } catch (error) {
+        console.error('Error fetching Rules:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+    
 });
 
 // Start the Express server
