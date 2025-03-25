@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import UserDataForm from '../components/UserDataForm';
 import DataList from '../components/DataList';
-import HostDetails from '../components/HostDetails';
 import { Host } from '../types/Host';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import RuleGroupDisplay from '../components/RuleGroupDisplay';
+import RuleGroupDetails from '../components/RuleGroupDetails';
 
 const Proof: React.FC = () => {
     const [ips, setIPs] = useState<Host[]>([]);
@@ -12,6 +11,9 @@ const Proof: React.FC = () => {
     const [selectedHost, setSelectedHost] = useState<Host | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+    const [ruleGroups, setRuleGroups] = useState<any[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
 
     // Fetch all data when the component mounts (only if logged in)
     useEffect(() => {
@@ -30,6 +32,66 @@ const Proof: React.FC = () => {
             });
         }
     }, [isLoggedIn]);
+
+    // Fetch rule groups when selected host changes
+    useEffect(() => {
+        if (selectedHost?.host) {
+            fetchRuleGroups(selectedHost.host);
+        } else {
+            setRuleGroups([]); // Clear rule groups if no host is selected
+        }
+    }, [selectedHost]);
+
+    const fetchRuleGroups = async (host: string) => {
+        setLoading(true);
+        setError(null);
+        setRuleGroups([]);
+
+        try {
+            const groupsResponse = await fetch(
+                `http://localhost:3001/ruleGroupsByHost?host=${encodeURIComponent(host)}`
+            );
+
+            if (!groupsResponse.ok) {
+                throw new Error(`Failed to fetch rule groups: ${groupsResponse.status}`);
+            }
+
+            const ruleGroupIds: number[] = await groupsResponse.json();
+
+            const detailedGroups = await Promise.all(
+                ruleGroupIds.map(async (ruleGroupId) => {
+                    const [rulesResponse, remarksResponse] = await Promise.all([
+                        fetch(`http://localhost:3001/getRules?ruleGroupId=${ruleGroupId}`),
+                        fetch(`http://localhost:3001/getRemarks?ruleGroupId=${ruleGroupId}`),
+                    ]);
+
+                    if (!rulesResponse.ok || !remarksResponse.ok) {
+                        throw new Error('Failed to fetch rules or remarks');
+                    }
+
+                    const rules = await rulesResponse.json();
+                    const remarks = await remarksResponse.json();
+
+                    return {
+                        remarks: remarks.map((r: any) => r.remark),
+                        rules: rules.map((rule: any) => ({
+                            ruleGroupId: rule.ruleGroupId,
+                            protocol: rule.protocol,
+                            ruleType: rule.ruleType,
+                            ruleBody: rule.ruleBody,
+                        })),
+                    };
+                })
+            );
+
+            setRuleGroups(detailedGroups);
+        } catch (err) {
+            console.error('Fetch error:', err);
+            setError(err instanceof Error ? err.message : 'Failed to fetch data');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Handle search input changes
     const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,6 +113,7 @@ const Proof: React.FC = () => {
         if (!isLoggedIn) {
             setFilteredIPs([]); // Clear data when logging out
             setSelectedHost(null);
+            setRuleGroups([]);
         }
     };
 
@@ -89,8 +152,24 @@ const Proof: React.FC = () => {
 
                         {/* Right: Host Details */}
                         <div className="p-3" style={{ flex: 1 }}>
-                            {selectedHost ? <HostDetails host={selectedHost} /> : <p className="text-muted">Select a host to see details</p>}
-                            <RuleGroupDisplay/>
+                            {loading ? (
+                                <div className="text-primary">Loading rule groups...</div>
+                            ) : error ? (
+                                <div className="alert alert-danger">Error: {error}</div>
+                            ) : selectedHost ? (
+                                ruleGroups.length > 0 ? (
+                                    <div style={{ overflowY: 'auto', maxHeight: '60vh' }}>
+                                        <h3 className="text-primary mb-3">Rule Groups for {selectedHost.host}</h3>
+                                        {ruleGroups.map((group, index) => (
+                                            <RuleGroupDetails key={index} ruleGroup={group} />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-muted">No rule groups found for this host</p>
+                                )
+                            ) : (
+                                <p className="text-muted">Select a host to see details</p>
+                            )}
                         </div>
                     </div>
                 </>

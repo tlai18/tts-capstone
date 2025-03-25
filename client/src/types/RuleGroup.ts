@@ -3,14 +3,14 @@ export interface RuleGroup {
     rules: Rule[];
 }
 
-interface Rule {
+export interface Rule {
     ruleGroupId: number;
     protocol: string;
     ruleType: string;
     ruleBody: string;
 }
 
-interface Remark {
+export interface Remark {
     ruleGroupId: number;
     remark: string;
 }
