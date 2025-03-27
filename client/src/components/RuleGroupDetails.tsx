@@ -1,20 +1,41 @@
 import React from 'react';
-import { RuleGroup, Rule, Remark } from '../types/RuleGroup'; // Assuming these interfaces are defined in your types
+import { RuleGroup } from '../types/RuleGroup'; // Assuming the RuleGroup type includes arrays for remarks and rules
 
 interface Props {
     ruleGroup: RuleGroup;
 }
 
 const RuleGroupDetails: React.FC<Props> = ({ ruleGroup }) => {
+    const containerStyle = {
+        backgroundColor: '#f0f8ff',
+        padding: '20px',
+        borderRadius: '8px',
+    };
+
+    const remarksStyle = {
+        backgroundColor: '#e1f0fa',
+        padding: '15px',
+        borderRadius: '6px',
+        marginBottom: '15px',
+    };
+
+    const ruleItemStyle = {
+        backgroundColor: '#f7fbff',
+        padding: '15px',
+        borderRadius: '6px',
+        marginBottom: '10px',
+        borderLeft: '4px solid #4a90e2',
+    };
+
     return (
-        <div className="container" style={{ backgroundColor: '#f0f8ff', padding: '20px', borderRadius: '8px' }}>
-            <h3 className="text-primary" style={{ color: '#2a4e6b', marginBottom: '20px' }}>Rule Group Details</h3>
+        <div className="container" style={containerStyle}>
+            <h3 style={{ color: '#2a4e6b', marginBottom: '20px' }}>Rule Group Details</h3>
             
             {/* Remarks Section */}
             {ruleGroup.remarks.length > 0 && (
-                <div className="mb-4" style={{ backgroundColor: '#e1f0fa', padding: '15px', borderRadius: '6px' }}>
+                <div style={remarksStyle}>
                     <h4 style={{ color: '#2a4e6b', marginTop: '0' }}>Remarks</h4>
-                    <ul className="mb-0" style={{ margin: '0', paddingLeft: '20px' }}>
+                    <ul style={{ margin: '0', paddingLeft: '20px' }}>
                         {ruleGroup.remarks.map((remark, index) => (
                             <li key={index} style={{ marginBottom: '8px' }}>{remark}</li>
                         ))}
@@ -24,35 +45,31 @@ const RuleGroupDetails: React.FC<Props> = ({ ruleGroup }) => {
 
             {/* Rules Section */}
             <div>
-                <h4 style={{ color: '#2a4e6b', marginBottom: '15px' }}>Rules ({ruleGroup.rules.length})</h4>
+                <h4 style={{ color: '#2a4e6b', marginBottom: '15px' }}>
+                    Rules ({ruleGroup.rules.length})
+                </h4>
                 
                 {ruleGroup.rules.length > 0 ? (
-                    <div className="table-responsive">
-                        <table className="table table-bordered shadow-sm" style={{ backgroundColor: '#ffffff', borderRadius: '8px' }}>
-                            <thead className="bg-primary text-white" style={{ backgroundColor: '#4a90e2' }}>
-                                <tr>
-                                    <th scope="col">Protocol</th>
-                                    <th scope="col">Type</th>
-                                    <th scope="col">Rule Body</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {ruleGroup.rules.map((rule, index) => (
-                                    <tr key={index}>
-                                        <td style={{ fontWeight: 'bold', color: '#2a4e6b' }}>{rule.protocol}</td>
-                                        <td style={{ color: rule.ruleType === 'Allow' ? '#28a745' : '#dc3545' }}>
-                                            {rule.ruleType}
-                                        </td>
-                                        <td>{rule.ruleBody}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                    <ul style={{ listStyle: 'none', padding: '0' }}>
+                        {ruleGroup.rules.map((rule, index) => (
+                            <li key={index} style={ruleItemStyle}>
+                                <div>
+                                    <strong style={{ color: '#2a4e6b' }}>Protocol:</strong> {rule.protocol}
+                                </div>
+                                <div>
+                                    <strong style={{ color: '#2a4e6b' }}>Type:</strong>{' '}
+                                    <span style={{ color: rule.ruleType === 'Allow' ? '#28a745' : '#dc3545', marginLeft: '4px' }}>
+                                        {rule.ruleType}
+                                    </span>
+                                </div>
+                                <div>
+                                    <strong style={{ color: '#2a4e6b' }}>Rule:</strong> {rule.ruleBody}
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
                 ) : (
-                    <div className="alert alert-info" style={{ backgroundColor: '#e1f0fa', color: '#2a4e6b' }}>
-                        No rules in this group
-                    </div>
+                    <p style={{ color: '#666' }}>No rules in this group</p>
                 )}
             </div>
         </div>
