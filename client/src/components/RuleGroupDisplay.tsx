@@ -146,6 +146,7 @@ const styles = {
     maxWidth: '800px',
     margin: '0 auto',
     padding: '20px',
+    backgroundColor: '#f0f8ff', // Matching the background color of Proof component
   },
   group: {
     marginBottom: '10px',

@@ -1,12 +1,11 @@
 import React from 'react';
-import RuleGroupsByHost from '../components/RuleGroupsByHost';
 import RuleGroupDisplay from '../components/RuleGroupDisplay';
+import RuleGroupViewer from '../components/RuleGroupViewer';
 
 const Testing = () => {
     return (
         <>
-            <RuleGroupsByHost/>
-            <RuleGroupDisplay/>
+        <RuleGroupViewer/>
         </>
     )
 };
