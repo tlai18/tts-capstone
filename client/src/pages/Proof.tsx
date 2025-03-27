@@ -185,34 +185,15 @@ const Proof: React.FC = () => {
                                         ) : selectedHost ? (
                                             ruleGroups.length > 0 ? (
                                                 <div style={{ height: 'calc(100vh - 250px)', overflowY: 'auto' }}>
-                                                    {ruleGroups.map((group, index) => {
-                                                        const isExpanded = expandedGroups.includes(index);
-                                                        return (
-                                                            <div key={index} className="mb-3">
-                                                                <button
-                                                                    className={`btn w-100 text-start ${isExpanded ? 'bg-primary text-white' : 'bg-white'}`}
-                                                                    onClick={() => toggleGroup(index)}
-                                                                    style={{
-                                                                        padding: '12px 16px',
-                                                                        borderRadius: '8px',
-                                                                        border: '1px solid #e2e8f0',
-                                                                        fontWeight: isExpanded ? '600' : '500',
-                                                                        transition: 'all 0.2s'
-                                                                    }}
-                                                                >
-                                                                    {group.remarks[0] || '(No remark)'}
-                                                                    <span className="float-end">
-                                                                        {isExpanded ? '▲' : '▼'}
-                                                                    </span>
-                                                                </button>
-                                                                {isExpanded && (
-                                                                    <div className="p-3 bg-white border rounded-bottom">
-                                                                        <RuleGroupDetails ruleGroup={group} />
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })}
+                                                    {ruleGroups.map((group, index) => (
+                                                        <RuleGroupDetails 
+                                                            key={index}
+                                                            ruleGroup={group}
+                                                            index={index}
+                                                            isExpanded={expandedGroups.includes(index)}
+                                                            onToggle={toggleGroup}
+                                                        />
+                                                    ))}
                                                 </div>
                                             ) : (
                                                 <div className="text-center py-5 text-muted">
