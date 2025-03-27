@@ -15,8 +15,7 @@ const Proof: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [expandedGroups, setExpandedGroups] = useState<number[]>([]);
 
-
-    // Fetch all data when the component mounts (only if logged in)
+    // Fetch data when component mounts and login state changes
     useEffect(() => {
         if (isLoggedIn) {
             fetch('http://localhost:3001/getAllData', {
@@ -26,11 +25,9 @@ const Proof: React.FC = () => {
             .then(response => response.json())
             .then(data => {
                 setIPs(data);
-                setFilteredIPs(data); // Initially, all data is shown
+                setFilteredIPs(data);
             })
-            .catch(error => {
-                console.error('Error fetching data:', error);
-            });
+            .catch(console.error);
         }
     }, [isLoggedIn]);
 
@@ -39,41 +36,26 @@ const Proof: React.FC = () => {
         if (selectedHost?.host) {
             fetchRuleGroups(selectedHost.host);
         } else {
-            setRuleGroups([]); // Clear rule groups if no host is selected
+            setRuleGroups([]);
         }
-        setExpandedGroups([]); // Reset when host changes
+        setExpandedGroups([]);
     }, [selectedHost]);
 
     const fetchRuleGroups = async (host: string) => {
         setLoading(true);
         setError(null);
-        setRuleGroups([]);
-
         try {
-            const groupsResponse = await fetch(
+            const response = await fetch(
                 `http://localhost:3001/ruleGroupsByHost?host=${encodeURIComponent(host)}`
             );
-
-            if (!groupsResponse.ok) {
-                throw new Error(`Failed to fetch rule groups: ${groupsResponse.status}`);
-            }
-
-            const ruleGroupIds: number[] = await groupsResponse.json();
-
+            const ruleGroupIds = await response.json();
+            
             const detailedGroups = await Promise.all(
-                ruleGroupIds.map(async (ruleGroupId) => {
-                    const [rulesResponse, remarksResponse] = await Promise.all([
-                        fetch(`http://localhost:3001/getRules?ruleGroupId=${ruleGroupId}`),
-                        fetch(`http://localhost:3001/getRemarks?ruleGroupId=${ruleGroupId}`),
+                ruleGroupIds.map(async (id: number) => {
+                    const [rules, remarks] = await Promise.all([
+                        fetch(`http://localhost:3001/getRules?ruleGroupId=${id}`).then(r => r.json()),
+                        fetch(`http://localhost:3001/getRemarks?ruleGroupId=${id}`).then(r => r.json())
                     ]);
-
-                    if (!rulesResponse.ok || !remarksResponse.ok) {
-                        throw new Error('Failed to fetch rules or remarks');
-                    }
-
-                    const rules = await rulesResponse.json();
-                    const remarks = await remarksResponse.json();
-
                     return {
                         remarks: remarks.map((r: any) => r.remark),
                         rules: rules.map((rule: any) => ({
@@ -85,64 +67,60 @@ const Proof: React.FC = () => {
                     };
                 })
             );
-
             setRuleGroups(detailedGroups);
         } catch (err) {
-            console.error('Fetch error:', err);
             setError(err instanceof Error ? err.message : 'Failed to fetch data');
         } finally {
             setLoading(false);
         }
     };
 
-    // Handle search input changes
-    const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const query = event.target.value.toLowerCase();
+    const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const query = e.target.value.toLowerCase();
         setSearchQuery(query);
-
-        if (!query) {
-            setFilteredIPs(ips); // Reset to all data when input is empty
-            return;
-        }
-
-        const filteredResults = ips.filter(ip => ip.host && ip.host.toLowerCase().includes(query));
-        setFilteredIPs(filteredResults);
+        setFilteredIPs(query ? ips.filter(ip => ip.host?.toLowerCase().includes(query)) : ips);
     };
 
-    // Handle login/logout toggle
     const toggleAuth = () => {
         setIsLoggedIn(!isLoggedIn);
         if (!isLoggedIn) {
-            setFilteredIPs([]); // Clear data when logging out
+            setFilteredIPs([]);
             setSelectedHost(null);
             setRuleGroups([]);
         }
     };
 
+    const toggleGroup = (index: number) => {
+        setExpandedGroups(prev => 
+            prev.includes(index) 
+                ? prev.filter(i => i !== index) 
+                : [...prev, index]
+        );
+    };
+
     return (
-        <div className="container-fluid py-5" style={{ backgroundColor: '#f0f8ff', minHeight: '100vh' }}>
-            <div className="d-flex justify-content-between align-items-center mb-4 px-4" style={{ position: 'relative' }}>
-                {/* Invisible spacer for symmetry */}
+        <div className="container-fluid py-4" style={{ backgroundColor: '#f8fafc', minHeight: '100vh' }}>
+            {/* Header */}
+            <div className="d-flex justify-content-between align-items-center mb-4 px-4">
                 <div style={{ width: '150px' }}></div>
-
-                    {/* Centered title */}
-                    <h1 className="m-0 text-center" style={{ fontWeight: 700, color: '#004085', flexGrow: 1 }}>
-                        Tufts Firewalls Manager
-                    </h1>
-
-                    {/* Right-aligned button */}
-                    <div style={{ width: '150px', textAlign: 'right' }}>
-                        <button
-                            className="btn btn-outline-primary px-4 py-2"
-                            style={{ fontWeight: 'bold' }}
-                            onClick={toggleAuth}
-                        >
-                            {isLoggedIn ? 'Logout' : 'Login'}
-                        </button>
-                    </div>
+                <h1 className="m-0 text-center" style={{ 
+                    fontWeight: 700, 
+                    color: '#1e40af',
+                    fontSize: '1.8rem'
+                }}>
+                    Tufts Firewalls Manager
+                </h1>
+                <div style={{ width: '150px', textAlign: 'right' }}>
+                    <button
+                        className={`btn px-4 py-2 ${isLoggedIn ? 'btn-danger' : 'btn-primary'}`}
+                        onClick={toggleAuth}
+                        style={{ fontWeight: '600' }}
+                    >
+                        {isLoggedIn ? 'Logout' : 'Login'}
+                    </button>
                 </div>
+            </div>
 
-    
             {isLoggedIn && (
                 <div className="px-4">
                     {/* Search Bar */}
@@ -150,99 +128,111 @@ const Proof: React.FC = () => {
                         <input 
                             type="text"
                             className="form-control form-control-lg shadow-sm"
-                            placeholder="🔎 Search by host..."
+                            placeholder="🔍 Search by host..."
                             value={searchQuery}
                             onChange={handleSearch}
                             style={{
-                                textAlign: 'center',
-                                border: '2px solid #007bff',
+                                padding: '12px 20px',
+                                border: '1px solid #e2e8f0',
                                 borderRadius: '10px',
-                                fontSize: '1.1rem',
+                                fontSize: '1rem'
                             }}
                         />
                     </div>
-    
-                    {/* Hosts Section */}
-                    <div className="mb-4 p-4 bg-white rounded shadow-sm">
-                        <h3 className="text-primary mb-3" style={{ fontWeight: 600 }}>Available Hosts</h3>
-                        <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #dee2e6', borderRadius: '6px' }}>
-                            <DataList ips={filteredIPs} onSelect={setSelectedHost} selectedHost={selectedHost} />
-                        </div>
-                    </div>
-    
-                    {/* Divider */}
-                    <hr className="my-4 border-primary" />
-    
-                    {/* Rule Groups Section */}
-                    <div className="p-4 bg-white rounded shadow-sm">
-                        <h3 className="text-primary mb-3" style={{ fontWeight: 600 }}>Available Rule Groups</h3>
-    
-                        {loading ? (
-                            <div className="text-center text-primary py-5">Loading rule groups...</div>
-                        ) : error ? (
-                            <div className="alert alert-danger text-center">{error}</div>
-                        ) : selectedHost ? (
-                            ruleGroups.length > 0 ? (
-                                <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                                    <table className="table table-hover" style={{ marginBottom: 0 }}>
-                                        <tbody>
-                                            {ruleGroups.map((group, index) => {
-                                                const remark = group.remarks[0] || '(No remark)';
-                                                const isExpanded = expandedGroups.includes(index);
-    
-                                                return (
-                                                    <React.Fragment key={index}>
-                                                        <tr
-                                                            onClick={() =>
-                                                                setExpandedGroups(prev =>
-                                                                    prev.includes(index)
-                                                                        ? prev.filter(i => i !== index)
-                                                                        : [...prev, index]
-                                                                )
-                                                            }
-                                                            style={{
-                                                                cursor: 'pointer',
-                                                                transition: '0.3s',
-                                                                backgroundColor: isExpanded ? '#007bff' : 'white',
-                                                                color: isExpanded ? 'white' : '#212529',
-                                                                fontWeight: isExpanded ? 'bold' : 'normal',
-                                                            }}
-                                                        >
-                                                            <td>
-                                                                {remark}
-                                                                <span style={{ float: 'right' }}>
-                                                                    {isExpanded ? '▲' : '▼'}
-                                                                </span>
-                                                            </td>
-                                                        </tr>
-                                                        {isExpanded && (
-                                                            <tr>
-                                                                <td colSpan={1} style={{ backgroundColor: '#f8f9fa' }}>
-                                                                    <div className="p-3 border rounded">
+
+                    {/* Main Card */}
+                    <div className="card shadow-sm border-0 overflow-hidden">
+                        <div className="card-body p-0">
+                            <div className="row g-0">
+                                {/* Hosts List - 1/3 */}
+                                <div className="col-md-4 border-end" style={{ backgroundColor: '#ffffff' }}>
+                                    <div className="p-4">
+                                        <h3 className="text-primary mb-3" style={{ fontWeight: 600 }}>Hosts</h3>
+                                        <div style={{ 
+                                            height: 'calc(100vh - 250px)', 
+                                            overflowY: 'auto',
+                                            borderRadius: '8px'
+                                        }}>
+                                            <DataList 
+                                                ips={filteredIPs} 
+                                                onSelect={setSelectedHost} 
+                                                selectedHost={selectedHost} 
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Rule Groups - 2/3 */}
+                                <div className="col-md-8" style={{ backgroundColor: '#f9fafb' }}>
+                                    <div className="p-4">
+                                        <div className="d-flex justify-content-between align-items-center mb-3">
+                                            <h3 className="text-primary" style={{ fontWeight: 600 }}>
+                                                Rule Groups
+                                            </h3>
+                                            {selectedHost && (
+                                                <span className="badge bg-primary">
+                                                    {selectedHost.host}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {loading ? (
+                                            <div className="text-center py-5">
+                                                <div className="spinner-border text-primary"></div>
+                                            </div>
+                                        ) : error ? (
+                                            <div className="alert alert-danger">{error}</div>
+                                        ) : selectedHost ? (
+                                            ruleGroups.length > 0 ? (
+                                                <div style={{ height: 'calc(100vh - 250px)', overflowY: 'auto' }}>
+                                                    {ruleGroups.map((group, index) => {
+                                                        const isExpanded = expandedGroups.includes(index);
+                                                        return (
+                                                            <div key={index} className="mb-3">
+                                                                <button
+                                                                    className={`btn w-100 text-start ${isExpanded ? 'bg-primary text-white' : 'bg-white'}`}
+                                                                    onClick={() => toggleGroup(index)}
+                                                                    style={{
+                                                                        padding: '12px 16px',
+                                                                        borderRadius: '8px',
+                                                                        border: '1px solid #e2e8f0',
+                                                                        fontWeight: isExpanded ? '600' : '500',
+                                                                        transition: 'all 0.2s'
+                                                                    }}
+                                                                >
+                                                                    {group.remarks[0] || '(No remark)'}
+                                                                    <span className="float-end">
+                                                                        {isExpanded ? '▲' : '▼'}
+                                                                    </span>
+                                                                </button>
+                                                                {isExpanded && (
+                                                                    <div className="p-3 bg-white border rounded-bottom">
                                                                         <RuleGroupDetails ruleGroup={group} />
                                                                     </div>
-                                                                </td>
-                                                            </tr>
-                                                        )}
-                                                    </React.Fragment>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-5 text-muted">
+                                                    No rule groups found for this host
+                                                </div>
+                                            )
+                                        ) : (
+                                            <div className="text-center py-5 text-muted">
+                                                Select a host to view rule groups
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            ) : (
-                                <div className="text-muted text-center py-4">No rule groups found for this host</div>
-                            )
-                        ) : (
-                            <div className="text-muted text-center py-4">Select a host to see rule groups</div>
-                        )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
         </div>
     );
-    
-    
 };
 
 export default Proof;
