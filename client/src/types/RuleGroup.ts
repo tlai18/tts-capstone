@@ -1,4 +1,5 @@
 export interface RuleGroup {
+    id: number;
     remarks: string[];
     rules: Rule[];
 }
