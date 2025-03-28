@@ -57,6 +57,7 @@ const Proof: React.FC = () => {
                         fetch(`http://localhost:3001/getRemarks?ruleGroupId=${id}`).then(r => r.json())
                     ]);
                     return {
+                        id,
                         remarks: remarks.map((r: any) => r.remark),
                         rules: rules.map((rule: any) => ({
                             ruleGroupId: rule.ruleGroupId,
@@ -90,11 +91,11 @@ const Proof: React.FC = () => {
         }
     };
 
-    const toggleGroup = (index: number) => {
+    const toggleGroup = (id: number) => {
         setExpandedGroups(prev => 
-            prev.includes(index) 
-                ? prev.filter(i => i !== index) 
-                : [...prev, index]
+            prev.includes(id) 
+                ? prev.filter(i => i !== id) 
+                : [...prev, id]
         );
     };
 
@@ -187,12 +188,17 @@ const Proof: React.FC = () => {
                                                 <div style={{ height: 'calc(100vh - 250px)', overflowY: 'auto' }}>
                                                     {ruleGroups.map((group, index) => (
                                                         <RuleGroupDetails 
-                                                            key={index}
-                                                            ruleGroup={group}
-                                                            index={index}
-                                                            isExpanded={expandedGroups.includes(index)}
-                                                            onToggle={toggleGroup}
-                                                        />
+                                                        key={group.id} // Use the actual ID as key
+                                                        ruleGroup={group}
+                                                        ruleGroupId={group.id} // Pass the ID as prop
+                                                        index={index}
+                                                        isExpanded={expandedGroups.includes(group.id)} // Use ID for expansion tracking
+                                                        onToggle={(id) => setExpandedGroups(prev => 
+                                                            prev.includes(id) 
+                                                                ? prev.filter(i => i !== id) 
+                                                                : [...prev, id]
+                                                        )}
+                                                    />
                                                     ))}
                                                 </div>
                                             ) : (
