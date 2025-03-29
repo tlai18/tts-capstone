@@ -122,7 +122,7 @@ const Home: React.FC = () => {
                 </div>
             </div>
 
-            {isLoggedIn && (
+            {/* isLoggedIn && */ (
                 <div className="px-4">
                     {/* Search Bar */}
                     <div className="mb-4">
