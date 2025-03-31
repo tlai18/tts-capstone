@@ -28,6 +28,10 @@ const Home: React.FC = () => {
                 setFilteredIPs(data);
             })
             .catch(console.error);
+        } else {
+            setIPs([]);
+            setFilteredIPs([]);
+            setRuleGroups([]);
         }
     }, [isLoggedIn]);
 
