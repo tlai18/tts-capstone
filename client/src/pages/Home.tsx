@@ -9,20 +9,44 @@ const Home: React.FC = () => {
     const [filteredIPs, setFilteredIPs] = useState<Host[]>([]);
     const [selectedHost, setSelectedHost] = useState<Host | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>("");
-    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
     const [ruleGroups, setRuleGroups] = useState<any[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [expandedGroups, setExpandedGroups] = useState<number[]>([]);
 
+    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+    const [userEmail, setUserEmail] = useState<string>("escp@tufts.edu"); // Default email
+
+
+    // Fetch data when component mounts and login state changes
+    // useEffect(() => {
+    //     if (isLoggedIn) {
+    //         fetch('http://localhost:3001/getAllData', {
+    //             method: 'POST',
+    //             headers: { 'Content-Type': 'application/json' },
+    //         })
+    //         .then(response => response.json())
+    //         .then(data => {
+    //             setIPs(data);
+    //             setFilteredIPs(data);
+    //         })
+    //         .catch(console.error);
+    //     }
+    // }, [isLoggedIn]);
+
     // Fetch data when component mounts and login state changes
     useEffect(() => {
         if (isLoggedIn) {
-            fetch('http://localhost:3001/getAllData', {
-                method: 'POST',
+            fetch(`http://localhost:3001/hostsByEmail?email=${encodeURIComponent(userEmail)}`, {
+                method: 'GET',
                 headers: { 'Content-Type': 'application/json' },
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(data => {
                 setIPs(data);
                 setFilteredIPs(data);
@@ -33,7 +57,7 @@ const Home: React.FC = () => {
             setFilteredIPs([]);
             setRuleGroups([]);
         }
-    }, [isLoggedIn]);
+    }, [isLoggedIn, userEmail]);
 
     // Fetch rule groups when selected host changes
     useEffect(() => {
@@ -105,9 +129,48 @@ const Home: React.FC = () => {
 
     return (
         <div className="container-fluid py-4" style={{ backgroundColor: '#f8fafc', minHeight: '100vh' }}>
-            {/* Header */}
+            {/* Header with enhanced email display */}
             <div className="d-flex justify-content-between align-items-center mb-4 px-4">
-                <div style={{ width: '150px' }}></div>
+                <div style={{ 
+                    width: '150px',
+                    display: 'flex',
+                    alignItems: 'center'
+                }}>
+                    {isLoggedIn && (
+                        <div style={{
+                            backgroundColor: '#ffffff',
+                            padding: '6px 12px',
+                            borderRadius: '20px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                            display: 'flex',
+                            alignItems: 'center'
+                        }}>
+                            <span style={{
+                                display: 'inline-block',
+                                width: '24px',
+                                height: '24px',
+                                backgroundColor: '#1e40af',
+                                color: 'white',
+                                borderRadius: '50%',
+                                textAlign: 'center',
+                                lineHeight: '24px',
+                                marginRight: '8px',
+                                fontSize: '12px'
+                            }}>
+                                {userEmail.charAt(0).toUpperCase()}
+                            </span>
+                            <span style={{
+                                maxWidth: '100px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                fontSize: '14px'
+                            }}>
+                                {userEmail}
+                            </span>
+                        </div>
+                    )}
+                </div>
                 <h1 className="m-0 text-center" style={{ 
                     fontWeight: 700, 
                     color: '#1e40af',
@@ -128,6 +191,41 @@ const Home: React.FC = () => {
 
             {/* isLoggedIn && */ (
                 <div className="px-4">
+                    {/* User welcome section */}
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '1.5rem',
+                        padding: '1rem',
+                        backgroundColor: '#f1f5f9',
+                        borderRadius: '8px',
+                        borderLeft: '4px solid #1e40af'
+                    }}>
+                        <div>
+                            <h4 style={{ 
+                                margin: 0,
+                                color: '#64748b',
+                                fontSize: '1.1rem'
+                            }}>
+                                Managing hosts for <span style={{ color: '#1e40af', fontWeight: 600 }}>{userEmail}</span>
+                            </h4>
+                            <small style={{ color: '#94a3b8' }}>
+                                {ips.length} {ips.length === 1 ? 'host' : 'hosts'} available
+                            </small>
+                        </div>
+                        <span style={{
+                            backgroundColor: '#e0f2fe',
+                            color: '#0369a1',
+                            padding: '4px 12px',
+                            borderRadius: '20px',
+                            fontWeight: 500,
+                            fontSize: '0.9rem'
+                        }}>
+                            {userEmail.split('@')[0]}
+                        </span>
+                    </div>
+
                     {/* Search Bar */}
                     <div className="mb-4">
                         <input 

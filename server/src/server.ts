@@ -98,6 +98,7 @@ app.post('/getData', async (req: Request, res: Response) => {
     res.json(hosts);
 });
 
+// for developing / debugging
 app.post('/getAllData', async (req: Request, res: Response) => {
   try {
       const hosts = await prisma.host.findMany(); // Fetch all records
@@ -105,6 +106,42 @@ app.post('/getAllData', async (req: Request, res: Response) => {
   } catch (error) {
       console.error('Error fetching hosts:', error);
       res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.get('/hostsByEmail', async (req: Request, res: Response) => {
+  const { email } = req.query;
+
+  if (!email) {
+    res.status(400).json({ error: 'Email parameter is required' });
+    return;
+  }
+
+  try {
+    // First find the owner by email (using findFirst since email isn't @id)
+    const owner = await prisma.owner.findFirst({
+      where: {
+        email: email as string
+      }
+    });
+
+    if (!owner) {
+      res.status(404).json({ error: 'Owner not found with this email' });
+      return;
+    }
+
+    // Now find all hosts associated with this owner
+    const hosts = await prisma.host.findMany({
+      where: {
+        ownerName: owner.name
+      }
+    });
+
+    // Return the associated hosts
+    res.json(hosts);
+  } catch (error) {
+    console.error('Error fetching hosts by email:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
