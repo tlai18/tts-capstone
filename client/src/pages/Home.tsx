@@ -51,10 +51,11 @@ const Home: React.FC = () => {
                 setIPs(data);
                 setFilteredIPs(data);
             })
-            .catch(error => {
-                console.error('Error fetching hosts:', error);
-                setError(error.message);
-            });
+            .catch(console.error);
+        } else {
+            setIPs([]);
+            setFilteredIPs([]);
+            setRuleGroups([]);
         }
     }, [isLoggedIn, userEmail]);
 
@@ -188,7 +189,7 @@ const Home: React.FC = () => {
                 </div>
             </div>
 
-            {isLoggedIn && (
+            {/* isLoggedIn && */ (
                 <div className="px-4">
                     {/* User welcome section */}
                     <div style={{
