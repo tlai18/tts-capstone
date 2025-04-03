@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { env } from 'yargs';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -9,7 +10,7 @@ const cors = require('cors');
 app.use(express.json());
 
 const corsOptions = {
-    origin: ['http://localhost:3000', "http://10.148.0.46/", "http://10.148.0.46:3000"], 
+    origin: env("IP_ADDRESS"), 
     methods: 'GET,POST', 
     allowedHeaders: ['Content-Type', 'Authorization'] 
 };
