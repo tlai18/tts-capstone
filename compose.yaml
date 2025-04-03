@@ -38,6 +38,8 @@ services:
     restart: always
     ports:
       - "3000:3000"
+      - "80:80"
+      - "443:443"
     develop:
       watch:
         - action: sync
