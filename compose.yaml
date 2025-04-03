@@ -23,6 +23,7 @@ services:
       - .env
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      IP_ADDRESS: ${IP_ADDRESS}
     develop:
       watch:
         - action: sync
@@ -40,6 +41,8 @@ services:
       - "3000:3000"
       - "80:80"
       - "443:443"
+    environment:
+      - IP_ADDRESS: ${IP_ADDRESS}
     develop:
       watch:
         - action: sync
