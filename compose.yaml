@@ -41,8 +41,10 @@ services:
       - "3000:3000"
       - "80:80"
       - "443:443"
+    env_file:
+      - .env
     environment:
-      - IP_ADDRESS: ${IP_ADDRESS}
+      - IP_ADDRESS=${IP_ADDRESS}
     develop:
       watch:
         - action: sync

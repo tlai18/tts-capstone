@@ -35,7 +35,7 @@ const RuleGroupViewer: React.FC = () => {
 
     try {
       const groupsResponse = await fetch(
-        `http://${process.env.IP_ADDRESS}:3001/ruleGroupsByHost?host=${encodeURIComponent(host)}`
+        `${process.env.IP_ADDRESS}:3001/ruleGroupsByHost?host=${encodeURIComponent(host)}`
       );
 
       if (!groupsResponse.ok) {
@@ -47,8 +47,8 @@ const RuleGroupViewer: React.FC = () => {
       const detailedGroups = await Promise.all(
         ruleGroupIds.map(async (ruleGroupId) => {
           const [rulesResponse, remarksResponse] = await Promise.all([
-            fetch(`http://${process.env.IP_ADDRESS}:3001/getRules?ruleGroupId=${ruleGroupId}`),
-            fetch(`http://${process.env.IP_ADDRESS}:3001/getRemarks?ruleGroupId=${ruleGroupId}`),
+            fetch(`${process.env.IP_ADDRESS}:3001/getRules?ruleGroupId=${ruleGroupId}`),
+            fetch(`${process.env.IP_ADDRESS}:3001/getRemarks?ruleGroupId=${ruleGroupId}`),
           ]);
 
           if (!rulesResponse.ok || !remarksResponse.ok) {
