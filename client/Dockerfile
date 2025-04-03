@@ -9,6 +9,10 @@ RUN npm install
 
 COPY . .
 
+ARG REACT_APP_IP_ADDRESS
+
+ENV REACT_APP_IP_ADDRESS $REACT_APP_IP_ADDRESS
+
 RUN npm run build
  
 # Production Stage
