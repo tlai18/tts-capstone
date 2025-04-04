@@ -10,9 +10,9 @@ const cors = require('cors');
 app.use(express.json());
 
 const corsOptions = {
-    origin: process.env.IP_ADDRESS,
-    methods: 'GET,POST', 
-    allowedHeaders: ['Content-Type', 'Authorization'] 
+    origin: [`https://${process.env.IP_ADDRESS}`, `http://${process.env.IP_ADDRESS}`],
+    methods: 'GET,POST',
+    allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 app.use(cors(corsOptions));

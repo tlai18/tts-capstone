@@ -21,7 +21,7 @@ const Home: React.FC = () => {
     // Fetch data when component mounts and login state changes
     // useEffect(() => {
     //     if (isLoggedIn) {
-    //         fetch('${process.env.REACT_APP_IP_ADDRESS}:3001/getAllData', {
+    //         fetch('https://${process.env.REACT_APP_IP_ADDRESS}/api/getAllData', {
     //             method: 'POST',
     //             headers: { 'Content-Type': 'application/json' },
     //         })
@@ -37,7 +37,7 @@ const Home: React.FC = () => {
     // Fetch data when component mounts and login state changes
     useEffect(() => {
         if (isLoggedIn) {
-            fetch(`${process.env.REACT_APP_IP_ADDRESS}:3001/hostsByEmail?email=${encodeURIComponent(userEmail)}`, {
+            fetch(`/api/hostsByEmail?email=${encodeURIComponent(userEmail)}`, {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' },
             })
@@ -74,15 +74,15 @@ const Home: React.FC = () => {
         setError(null);
         try {
             const response = await fetch(
-                `${process.env.REACT_APP_IP_ADDRESS}:3001/ruleGroupsByHost?host=${encodeURIComponent(host)}`
+                `/api/ruleGroupsByHost?host=${encodeURIComponent(host)}`
             );
             const ruleGroupIds = await response.json();
             
             const detailedGroups = await Promise.all(
                 ruleGroupIds.map(async (id: number) => {
                     const [rules, remarks] = await Promise.all([
-                        fetch(`${process.env.REACT_APP_IP_ADDRESS}:3001/getRules?ruleGroupId=${id}`).then(r => r.json()),
-                        fetch(`${process.env.REACT_APP_IP_ADDRESS}:3001/getRemarks?ruleGroupId=${id}`).then(r => r.json())
+                        fetch(`https://${process.env.REACT_APP_IP_ADDRESS}/api/getRules?ruleGroupId=${id}`).then(r => r.json()),
+                        fetch(`https://${process.env.REACT_APP_IP_ADDRESS}/api/getRemarks?ruleGroupId=${id}`).then(r => r.json())
                     ]);
                     return {
                         id,

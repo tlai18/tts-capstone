@@ -42,8 +42,6 @@ services:
     restart: always
     ports:
       - "3000:3000"
-      - "80:80"
-      - "443:443"
     develop:
       watch:
         - action: sync
@@ -52,6 +50,27 @@ services:
         - action: rebuild
           path: package.json
           target: /app
+      
+  apache:
+    container_name: apache-proxy
+    build: 
+      context: ./apache
+      args:
+        IP_ADDRESS: ${IP_ADDRESS}
+    restart: always
+    ports:
+      - "80:80" 
+      - "443:443" 
+    env_file:
+      - .env
+    environment:
+      - IP_ADDRESS=${IP_ADDRESS}
+    volumes:
+      - ./certs:/etc/ssl/certs 
+      - ./apache/reverse-proxy.conf:/usr/local/apache2/conf/extra/reverse-proxy.conf
+    depends_on:
+      - server
+      - client
       
 volumes:
   postgres:
