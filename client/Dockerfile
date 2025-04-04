@@ -16,8 +16,7 @@ ENV REACT_APP_IP_ADDRESS $REACT_APP_IP_ADDRESS
 RUN npm run build
  
 # Production Stage
-FROM httpd:alpine AS production
-COPY --from=build /app/build /usr/local/apache2/htdocs/
-COPY .htaccess /usr/local/apache2/htdocs/.htaccess
+FROM nginx:alpine AS production
+COPY --from=build /app/build /usr/share/nginx/html
 EXPOSE 80
-CMD ["httpd", "-D", "FOREGROUND"]
+CMD ["nginx", "-g", "daemon off;"]

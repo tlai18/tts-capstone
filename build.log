@@ -1,0 +1,107 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile:
+#1 transferring dockerfile: 980B done
+#1 DONE 0.1s
+
+#2 [internal] load metadata for docker.io/library/httpd:alpine
+#2 DONE 1.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [internal] load build context
+#4 DONE 0.0s
+
+#5 [1/6] FROM docker.io/library/httpd:alpine@sha256:4aec2953509e2d3aa5a8d73c580a381be44803fd2481875b15d9ad7d2810d7ca
+#5 resolve docker.io/library/httpd:alpine@sha256:4aec2953509e2d3aa5a8d73c580a381be44803fd2481875b15d9ad7d2810d7ca 0.1s done
+#5 DONE 0.1s
+
+#5 [1/6] FROM docker.io/library/httpd:alpine@sha256:4aec2953509e2d3aa5a8d73c580a381be44803fd2481875b15d9ad7d2810d7ca
+#5 CACHED
+
+#4 [internal] load build context
+#4 transferring context: 49B done
+#4 DONE 0.0s
+
+#6 [2/6] RUN apk update && apk add --no-cache     apache2-utils     openssl     gettext     && rm -rf /var/cache/apk/*
+#6 4.220 fetch https://dl-cdn.alpinelinux.org/alpine/v3.21/main/x86_64/APKINDEX.tar.gz
+#6 5.146 fetch https://dl-cdn.alpinelinux.org/alpine/v3.21/community/x86_64/APKINDEX.tar.gz
+#6 6.302 v3.21.3-264-gb0ede8eacde [https://dl-cdn.alpinelinux.org/alpine/v3.21/main]
+#6 6.302 v3.21.3-267-gb1b14b7bf27 [https://dl-cdn.alpinelinux.org/alpine/v3.21/community]
+#6 6.302 OK: 25399 distinct packages available
+#6 6.402 fetch https://dl-cdn.alpinelinux.org/alpine/v3.21/main/x86_64/APKINDEX.tar.gz
+#6 7.060 fetch https://dl-cdn.alpinelinux.org/alpine/v3.21/community/x86_64/APKINDEX.tar.gz
+#6 7.843 (1/9) Installing apache2-utils (2.4.62-r0)
+#6 8.446 (2/9) Installing libintl (0.22.5-r0)
+#6 8.770 (3/9) Installing gettext-envsubst (0.22.5-r0)
+#6 8.850 (4/9) Installing libgomp (14.2.0-r4)
+#6 9.393 (5/9) Installing ncurses-terminfo-base (6.5_p20241006-r3)
+#6 9.448 (6/9) Installing libncursesw (6.5_p20241006-r3)
+#6 10.05 (7/9) Installing gettext-libs (0.22.5-r0)
+#6 10.49 (8/9) Installing gettext (0.22.5-r0)
+#6 11.71 (9/9) Installing openssl (3.3.3-r0)
+#6 12.57 Executing busybox-1.37.0-r12.trigger
+#6 12.58 OK: 55 MiB in 49 packages
+#6 DONE 12.8s
+
+#7 [3/6] RUN sed -i '/^#LoadModule proxy_module/ s/^#//' /usr/local/apache2/conf/httpd.conf     && sed -i '/^#LoadModule proxy_http_module/ s/^#//' /usr/local/apache2/conf/httpd.conf     && sed -i '/^#LoadModule ssl_module/ s/^#//' /usr/local/apache2/conf/httpd.conf     && sed -i '/^#LoadModule rewrite_module/ s/^#//' /usr/local/apache2/conf/httpd.conf
+#7 DONE 6.8s
+
+#8 [4/6] COPY ./reverse-proxy.conf.template /usr/local/apache2/conf/extra/
+#8 DONE 0.2s
+
+#9 [5/6] RUN envsubst '${IP_ADDRESS}' < /usr/local/apache2/conf/extra/reverse-proxy.conf.template > /usr/local/apache2/conf/extra/reverse-proxy.conf && cat /usr/local/apache2/conf/extra/reverse-proxy.conf
+#9 8.010 <VirtualHost *:80>
+#9 8.010     ServerName localhost
+#9 8.010 
+#9 8.010     ProxyPass /api http://server:3001/
+#9 8.010     ProxyPassReverse /api http://server:3001/
+#9 8.010 
+#9 8.010     ProxyPass / http://client:3000/
+#9 8.010     ProxyPassReverse / http://client:3000/
+#9 8.010 
+#9 8.010     RewriteEngine On
+#9 8.010     RewriteCond %{HTTP_HOST} ^localhost$
+#9 8.010     RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+#9 8.010 </VirtualHost>
+#9 8.010 
+#9 8.010 <VirtualHost *:443>
+#9 8.010     ServerName localhost
+#9 8.010     SSLEngine on
+#9 8.010     SSLCertificateFile /etc/ssl/certs/mydomain.crt
+#9 8.010     SSLCertificateKeyFile /etc/ssl/certs/mydomain.key
+#9 8.010 
+#9 8.010     ProxyPass /api http://server:3001/
+#9 8.010     ProxyPassReverse /api http://server:3001/
+#9 8.010 
+#9 8.010     ProxyPass / http://client:3000/
+#9 8.010     ProxyPassReverse / http://client:3000/
+#9 8.010 
+#9 8.010     SSLCipherSuite HIGH:!aNULL:!MD5
+#9 8.010 
+#9 8.010     RewriteEngine On
+#9 8.010     RewriteCond %{HTTP_HOST} ^localhost$
+#9 8.010     RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [END,QSA,R=permanent]
+#9 8.010 </VirtualHost>
+#9 DONE 8.1s
+
+#10 [6/6] RUN echo "Include conf/extra/reverse-proxy.conf" >> /usr/local/apache2/conf/httpd.conf
+#10 DONE 8.7s
+
+#11 exporting to image
+#11 exporting layers
+#11 exporting layers 2.3s done
+#11 exporting manifest sha256:30efb94791097a2595d84be11361563002bc0adc1b8177a556d88448fe2fa794
+#11 exporting manifest sha256:30efb94791097a2595d84be11361563002bc0adc1b8177a556d88448fe2fa794 0.0s done
+#11 exporting config sha256:06b0730e373db98cbb3ea0dfd4cbb768b03200c1ae2ac868b73132e26c545401 0.0s done
+#11 exporting attestation manifest sha256:0b3f3db09bdb597185912be72e706a041730ea214875c5a5d452bc2591229e90
+#11 exporting attestation manifest sha256:0b3f3db09bdb597185912be72e706a041730ea214875c5a5d452bc2591229e90 0.1s done
+#11 exporting manifest list sha256:7edda9f643c06063d07ffa9f45ba685eb05de2962aebdf29f20280036bf8b0bd
+#11 exporting manifest list sha256:7edda9f643c06063d07ffa9f45ba685eb05de2962aebdf29f20280036bf8b0bd 0.0s done
+#11 naming to moby-dangling@sha256:7edda9f643c06063d07ffa9f45ba685eb05de2962aebdf29f20280036bf8b0bd done
+#11 unpacking to moby-dangling@sha256:7edda9f643c06063d07ffa9f45ba685eb05de2962aebdf29f20280036bf8b0bd
+#11 unpacking to moby-dangling@sha256:7edda9f643c06063d07ffa9f45ba685eb05de2962aebdf29f20280036bf8b0bd 0.8s done
+#11 DONE 3.4s
