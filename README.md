@@ -1,5 +1,13 @@
 # tts-capstone
 
+# .env file format
+```
+POSTGRES_PASSWORD=change_this
+POSTGRES_USER=change_this
+POSTGRES_DB=change_this
+IP_ADDRESS="http://localhost"
+```
+
 # Run with Docker
 
 1. Download [Docker Desktop](https://docs.docker.com/get-started/get-docker/)
