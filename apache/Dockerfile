@@ -26,5 +26,11 @@ COPY ./reverse-proxy.conf /etc/httpd/conf.d/
 # Generate shibboleth keys
 RUN pushd /etc/shibboleth && ./keygen.sh && popd
 
+# Copy Shibboleth configuration
+COPY ./shib/attribute-map.xml /etc/shibboleth/
+COPY ./shib/shibboleth2.xml /etc/shibboleth/
+COPY ./shib/shib-idp-prod-idp-metadata.xml /etc/shibboleth/
+COPY ./shib/shib.conf /etc/httpd/conf.d/
+
 EXPOSE 80 443
 CMD ["httpd", "-D", "FOREGROUND"]
