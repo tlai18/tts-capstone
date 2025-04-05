@@ -1,19 +1,27 @@
-FROM httpd:alpine
+FROM rockylinux:9
 
-RUN apk update && apk add --no-cache \
-    apache2-utils \
-    openssl \
-    && rm -rf /var/cache/apk/*
+# Get the Shibboleth repo
+RUN curl -X POST -d "platform=rockylinux9" https://shibboleth.net/cgi-bin/sp_repo.cgi > /etc/yum.repos.d/shibboleth.repo
 
-RUN sed -i '/^#LoadModule proxy_module/ s/^#//' /usr/local/apache2/conf/httpd.conf \
-    && sed -i '/^#LoadModule proxy_http_module/ s/^#//' /usr/local/apache2/conf/httpd.conf \
-    && sed -i '/^#LoadModule ssl_module/ s/^#//' /usr/local/apache2/conf/httpd.conf \
-    && sed -i '/^#LoadModule rewrite_module/ s/^#//' /usr/local/apache2/conf/httpd.conf
-    
-COPY ./reverse-proxy.conf /usr/local/apache2/conf/extra/
+# Install Apache and Shibboleth
+RUN dnf -y update && dnf -y install \
+    httpd \
+    httpd-tools \
+    mod_ssl \
+    shibboleth \
+    && dnf clean all
 
-RUN echo "Include conf/extra/reverse-proxy.conf" >> /usr/local/apache2/conf/httpd.conf
+# Enable necessary apache modules
+RUN sed -i '/^#LoadModule proxy_module/ s/^#//' /etc/httpd/conf/httpd.conf \
+    && sed -i '/^#LoadModule proxy_http_module/ s/^#//' /etc/httpd/conf/httpd.conf \
+    && sed -i '/^#LoadModule ssl_module/ s/^#//' /etc/httpd/conf/httpd.conf \
+    && sed -i '/^#LoadModule rewrite_module/ s/^#//' /etc/httpd/conf/httpd.conf
+
+# Disable default SSL configuration
+RUN mv /etc/httpd/conf.d/ssl.conf /etc/httpd/conf.d/ssl.conf.disabled
+
+# Copy custom reverse proxy configuration
+COPY ./reverse-proxy.conf /etc/httpd/conf.d/
 
 EXPOSE 80 443
-
 CMD ["httpd", "-D", "FOREGROUND"]
