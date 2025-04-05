@@ -23,5 +23,8 @@ RUN mv /etc/httpd/conf.d/ssl.conf /etc/httpd/conf.d/ssl.conf.disabled
 # Copy custom reverse proxy configuration
 COPY ./reverse-proxy.conf /etc/httpd/conf.d/
 
+# Generate shibboleth keys
+RUN pushd /etc/shibboleth && ./keygen.sh && popd
+
 EXPOSE 80 443
 CMD ["httpd", "-D", "FOREGROUND"]
