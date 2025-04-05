@@ -66,8 +66,9 @@ services:
     environment:
       - IP_ADDRESS=${IP_ADDRESS}
     volumes:
-      - ./certs:/etc/ssl/certs 
-      - ./apache/reverse-proxy.conf:/usr/local/apache2/conf/extra/reverse-proxy.conf
+      - ./certs:/etc/pki/tls/certs
+      - ./private:/etc/pki/tls/private
+      - ./apache/reverse-proxy.conf:/etc/httpd/conf.d/reverse-proxy.conf
     depends_on:
       - server
       - client
