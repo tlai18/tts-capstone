@@ -30,7 +30,8 @@ RUN pushd /etc/shibboleth && ./keygen.sh && popd
 COPY ./shib/attribute-map.xml /etc/shibboleth/
 COPY ./shib/shibboleth2.xml /etc/shibboleth/
 COPY ./shib/shib-idp-prod-idp-metadata.xml /etc/shibboleth/
-COPY ./shib/shib.conf /etc/httpd/conf.d/
+COPY ./shib/shib-idp-stage-idp-metadata.xml /etc/shibboleth/
+COPY ./shib/shib.conf /etc/httpd/conf.d
 
 EXPOSE 80 443
 CMD ["httpd", "-D", "FOREGROUND"]
