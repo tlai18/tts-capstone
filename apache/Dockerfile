@@ -32,5 +32,8 @@ COPY ./shib/shibboleth2.xml /etc/shibboleth/
 COPY ./shib/shib-idp-prod-idp-metadata.xml /etc/shibboleth/
 COPY ./shib/shib.conf /etc/httpd/conf.d/
 
+COPY ./start.sh /start.sh
+RUN chmod +x /start.sh
+
 EXPOSE 80 443
-CMD ["httpd", "-D", "FOREGROUND"]
+CMD ["/start.sh"]
