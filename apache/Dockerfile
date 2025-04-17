@@ -29,7 +29,7 @@ RUN pushd /etc/shibboleth && ./keygen.sh && popd
 # Copy Shibboleth configuration
 COPY ./shib/attribute-map.xml /etc/shibboleth/
 COPY ./shib/shibboleth2.xml /etc/shibboleth/
-COPY ./shib/shib-idp-prod-idp-metadata.xml /etc/shibboleth/
+COPY ./shib/shib-idp-stage-idp-metadata.xml /etc/shibboleth/
 COPY ./shib/shib.conf /etc/httpd/conf.d/
 
 COPY ./start.sh /start.sh
