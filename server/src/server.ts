@@ -17,70 +17,6 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Simulated Shibboleth login route
-app.get('/auth/login', (req: Request, res: Response) => {
-  // In the future, this will redirect the user to the Shibboleth IdP
-  // Simulate the redirect for now
-  res.send('Redirecting to Shibboleth IdP for authentication... (simulated)');
-});
-
-// Simulated Shibboleth callback route
-app.post('/auth/callback', async (req: Request, res: Response) => {
-  // Simulate receiving user attributes from the Shibboleth IdP
-  const mockProfile = {
-    email: 'mockuser@example.com',
-    name: 'Mock User',
-  };
-
-//   try {
-//     // Check if the user exists in the database
-//     let user = await prisma.user.findUnique({ where: { email: mockProfile.email } });
-
-//     if (!user) {
-//       // If the user does not exist, create a new user
-//       user = await prisma.user.create({
-//         data: { email: mockProfile.email, name: mockProfile.name },
-//       });
-//     }
-
-//     // Simulate setting a session or a cookie
-//     // In a real application, use a session middleware like `express-session`
-//     res.json({ message: 'User logged in successfully', user });
-//   } catch (error) {
-//     res.status(500).json({ message: 'Error during authentication', error });
-//   }
-});
-
-// Middleware placeholder for future Shibboleth authentication
-const shibbolethMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  // Future: Replace this with actual Shibboleth attribute checks
-  const isAuthenticated = true; // Simulate that the user is authenticated
-
-  if (isAuthenticated) {
-    // Simulate user attributes from Shibboleth
-    req.user = {
-      email: 'mockuser@example.com',
-      name: 'Mock User',
-    };
-    next();
-  } else {
-    res.status(401).send('User not authenticated');
-  }
-};
-
-// Apply the Shibboleth middleware to protect routes
-app.use('/protected', shibbolethMiddleware);
-
-app.get('/protected', (req: Request, res: Response) => {
-  // This route is protected by the simulated Shibboleth middleware
-  res.send('This is a protected route. You must be logged in to view this.');
-});
-
-// Test route
-app.get('/', (req: Request, res: Response) => {
-  res.send('Welcome to the app structured for future Shibboleth integration!');
-});
-
 // Fetch Data from IP
 app.post('/getData', async (req: Request, res: Response) => {
     const ip = req.body.ip;
@@ -99,19 +35,25 @@ app.post('/getData', async (req: Request, res: Response) => {
     res.json(hosts);
 });
 
-// for developing / debugging
-app.post('/getAllData', async (req: Request, res: Response) => {
-  try {
-      const hosts = await prisma.host.findMany(); // Fetch all records
-      res.json(hosts);
-  } catch (error) {
-      console.error('Error fetching hosts:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-  }
+app.get('/getUserInfo', async (req: Request, res: Response) => {
+    const email = req.headers['mail'] as string;
+    const uid = req.headers['uid'] as string;
+    
+    if (!email || !uid) {
+        res.status(400).json({ error: 'User information is missing' });
+        return;
+    }
+    try {
+        res.json({ email, uid });
+    } catch (error) {
+        console.error('Error fetching user information:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
 });
+    
 
 app.get('/hostsByEmail', async (req: Request, res: Response) => {
-  const { email } = req.query;
+  const email = req.headers['mail'] as string;
 
   if (!email) {
     res.status(400).json({ error: 'Email parameter is required' });
@@ -119,22 +61,28 @@ app.get('/hostsByEmail', async (req: Request, res: Response) => {
   }
 
   try {
-    // First find the owner by email (using findFirst since email isn't @id)
-    const owner = await prisma.owner.findFirst({
+    // First find the owners by email
+    const owners = await prisma.owner.findMany({
       where: {
-        email: email as string
+        email: {
+          equals: email,
+          mode: 'insensitive'
+        }
       }
     });
 
-    if (!owner) {
-      res.status(404).json({ error: 'Owner not found with this email' });
+    if (!owners) {
+      res.status(404).json({ error: 'Owners not found with this email' });
       return;
     }
 
-    // Now find all hosts associated with this owner
+    // Now find all hosts associated with owners
+    const ownersNames = owners.map(owner => owner.name);
     const hosts = await prisma.host.findMany({
       where: {
-        ownerName: owner.name
+        ownerName: {
+            in: ownersNames,
+        }
       }
     });
 
@@ -151,11 +99,51 @@ app.get('/ruleGroupsByHost', async (req: Request, res: Response) => {
 
   if (!host) {
     res.status(400).json({ error: 'Host parameter is required' });
-    return; // Ensure the function exits after sending the response
+    return; 
   }
-
+  
   try {
-    // Step 1: Find the NetworkObject associated with the given Host
+    
+    // Make sure the currently logged in user is an owner of the host
+    const email = req.headers['mail'] as string;
+    
+    if (!email) {
+      res.status(400).json({ error: 'User must be logged in with an email' });
+      return; 
+    }
+    
+    const owners = await prisma.owner.findMany({
+      where: {
+        email: {
+          equals: email,
+          mode: 'insensitive'
+        }
+      }
+    });
+  
+    if (!owners) {
+      res.status(404).json({ error: 'Owners not found with this email' });
+      return;
+    }
+  
+    // Now find all hosts associated with owners
+    const ownersNames = owners.map(owner => owner.name);
+    const hosts = await prisma.host.findMany({
+      where: {
+        ownerName: {
+            in: ownersNames,
+        }
+      }
+    });
+      
+    const checkHost = hosts.find((h) => h.host === host);
+    
+    if (!checkHost) {
+      res.status(403).json({ error: 'User is not authorized to access this host' });
+      return; 
+    }
+    
+    // Find the NetworkObject associated with the given Host
     const networkObject = await prisma.networkObject.findFirst({
       where: {
         host: {
@@ -170,7 +158,7 @@ app.get('/ruleGroupsByHost', async (req: Request, res: Response) => {
 
     if (!networkObject) {
       res.status(404).json({ error: 'No NetworkObject found for the given host' });
-      return; // Ensure the function exits after sending the response
+      return;
     }
     
     let networkGroupsSet: Set<string> = new Set();
@@ -235,55 +223,45 @@ app.get('/ruleGroupsByHost', async (req: Request, res: Response) => {
       }
     }
 
-    res.json(Array.from(ruleGroups)); // Send the response without returning it
+    const ruleGroupsArray = Array.from(ruleGroups);
+    
+    const detailedGroups = await Promise.all(
+        ruleGroupsArray.map(async (id: number) => {
+            const [rules, remarks] = await Promise.all([
+                prisma.rule.findMany({
+                    where: {
+                        ruleGroupId: {
+                            equals: id,
+                        },
+                    },
+                }),
+                prisma.remark.findMany({
+                    where: {
+                        ruleGroupId: {
+                            equals: id,
+                        },
+                    },
+                }),
+            ]);
+            return {
+                id,
+                remarks: remarks.map((r: any) => r.remark),
+                rules: rules.map((rule: any) => ({
+                    ruleGroupId: rule.ruleGroupId,
+                    protocol: rule.protocol,
+                    ruleType: rule.ruleType,
+                    ruleBody: rule.ruleBody,
+                })),
+            };
+        })
+    );
+    
+    res.json(detailedGroups);
+    
   } catch (error) {
     console.error('Error fetching RuleGroups:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
-});
-
-app.get('/getRemarks', async (req: Request, res: Response) => {
-    const { ruleGroupId } = req.query; 
-    
-    if (!ruleGroupId) {
-        res.status(400).json({ error: 'RuleGroupId parameter is required' });
-        return; 
-    }
-    
-    try {
-        const remarks = await prisma.remark.findMany({
-            where: {
-                ruleGroupId: parseInt(ruleGroupId as string),
-            },
-        });
-        res.json(remarks);
-    } catch (error) {
-        console.error('Error fetching Remarks:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
-    
-});
-
-app.get('/getRules', async (req: Request, res: Response) => {
-   const { ruleGroupId } = req.query; 
-   
-    if (!ruleGroupId) {
-         res.status(400).json({ error: 'RuleGroupId parameter is required' });
-         return; 
-    }
-    
-    try {
-        const rules = await prisma.rule.findMany({
-            where: {
-                ruleGroupId: parseInt(ruleGroupId as string),
-            },
-        });
-        res.json(rules);
-    } catch (error) {
-        console.error('Error fetching Rules:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
-    
 });
 
 // Start the Express server
