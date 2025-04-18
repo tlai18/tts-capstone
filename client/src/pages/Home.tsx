@@ -15,49 +15,43 @@ const Home: React.FC = () => {
     const [expandedGroups, setExpandedGroups] = useState<number[]>([]);
 
     const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-    const [userEmail, setUserEmail] = useState<string>("escp@tufts.edu"); // Default email
-
-
-    // Fetch data when component mounts and login state changes
-    // useEffect(() => {
-    //     if (isLoggedIn) {
-    //         fetch('https://${process.env.REACT_APP_IP_ADDRESS}/api/getAllData', {
-    //             method: 'POST',
-    //             headers: { 'Content-Type': 'application/json' },
-    //         })
-    //         .then(response => response.json())
-    //         .then(data => {
-    //             setIPs(data);
-    //             setFilteredIPs(data);
-    //         })
-    //         .catch(console.error);
-    //     }
-    // }, [isLoggedIn]);
+    const [userEmail, setUserEmail] = useState<string>("");
+    const [userID, setUserID] = useState<string>("");
 
     // Fetch data when component mounts and login state changes
     useEffect(() => {
-        if (isLoggedIn) {
-            fetch(`/api/hostsByEmail?email=${encodeURIComponent(userEmail)}`, {
+        fetch('/api/getUserInfo', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+        }).then(response => {
+            if (!response.ok) {
+                throw new Error('User info fetch failed');
+            }
+            return response.json();
+        }).then((userInfo) => {
+            setUserEmail(userInfo.email);
+            setUserID(userInfo.uid);
+            setIsLoggedIn(true);
+            
+            return fetch(`/api/hostsByEmail`, {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' },
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                setIPs(data);
-                setFilteredIPs(data);
-            })
-            .catch(console.error);
-        } else {
-            setIPs([]);
-            setFilteredIPs([]);
-            setRuleGroups([]);
-        }
-    }, [isLoggedIn, userEmail]);
+            });
+        }).then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        }).then(data => {
+            setIPs(data);
+            setFilteredIPs(data);
+        }).catch(err => {
+            console.error('Error:', err);
+            setUserEmail("");
+            setUserID("");
+            setIsLoggedIn(false);
+        })
+    }, []);
 
     // Fetch rule groups when selected host changes
     useEffect(() => {
@@ -76,26 +70,9 @@ const Home: React.FC = () => {
             const response = await fetch(
                 `/api/ruleGroupsByHost?host=${encodeURIComponent(host)}`
             );
-            const ruleGroupIds = await response.json();
+
+            const detailedGroups = await response.json();
             
-            const detailedGroups = await Promise.all(
-                ruleGroupIds.map(async (id: number) => {
-                    const [rules, remarks] = await Promise.all([
-                        fetch(`https://${process.env.REACT_APP_IP_ADDRESS}/api/getRules?ruleGroupId=${id}`).then(r => r.json()),
-                        fetch(`https://${process.env.REACT_APP_IP_ADDRESS}/api/getRemarks?ruleGroupId=${id}`).then(r => r.json())
-                    ]);
-                    return {
-                        id,
-                        remarks: remarks.map((r: any) => r.remark),
-                        rules: rules.map((rule: any) => ({
-                            ruleGroupId: rule.ruleGroupId,
-                            protocol: rule.protocol,
-                            ruleType: rule.ruleType,
-                            ruleBody: rule.ruleBody,
-                        })),
-                    };
-                })
-            );
             setRuleGroups(detailedGroups);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to fetch data');
@@ -111,11 +88,10 @@ const Home: React.FC = () => {
     };
 
     const toggleAuth = () => {
-        setIsLoggedIn(!isLoggedIn);
-        if (!isLoggedIn) {
-            setFilteredIPs([]);
-            setSelectedHost(null);
-            setRuleGroups([]);
+        if (isLoggedIn) {
+            window.location.href = '/Shibboleth.sso/Logout';
+        } else {
+            window.location.reload();
         }
     };
 
@@ -222,7 +198,7 @@ const Home: React.FC = () => {
                             fontWeight: 500,
                             fontSize: '0.9rem'
                         }}>
-                            {userEmail.split('@')[0]}
+                            {userID}
                         </span>
                     </div>
 
