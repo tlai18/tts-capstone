@@ -1,7 +1,6 @@
-import express, { Request, Response, NextFunction, response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { env } from 'yargs';
-import axios, { AxiosResponse } from 'axios';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -79,14 +78,7 @@ app.get('/protected', (req: Request, res: Response) => {
 
 // Test route
 app.get('/', (req: Request, res: Response) => {
-  axios.get('127.0.0.1/Shibboleth.sso/Session')
-    .then((response : AxiosResponse) => {
-        res.send(response.data);
-    })
-    .catch((error : any) => {
-        console.error('Error fetching session information:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    });
+  res.send('Welcome to the app structured for future Shibboleth integration!');
 });
 
 // Fetch Data from IP
