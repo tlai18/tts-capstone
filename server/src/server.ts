@@ -114,7 +114,7 @@ app.get('/ruleGroupsByHost', async (req: Request, res: Response) => {
     const owners = await prisma.owner.findMany({
       where: {
         emails: {
-          has: email,
+          has: email.toLowerCase().trim(),
         }
       }
     });
