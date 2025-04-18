@@ -324,14 +324,6 @@ async function validateReformatFile(filePath: string): Promise<[boolean, string]
     return [reformatted, outputPath];
 }
 
-async function insertObject (data: ObjectConfig, table: String): Promise<void> {
-  try {
-    console.log("Attempting to insert:", data);
-  } catch (error) {
-    console.error("Error inserting object:", data, error);
-  }
-};
-
 const insertOwners = async(): Promise<Map<string, string>> => {
     const ipsOwners = new Map<string, string>();
     const owners = new Map<string, Owner>();
@@ -343,7 +335,13 @@ const insertOwners = async(): Promise<Map<string, string>> => {
             .on('data', async (row) => {
                 if (row.name && row.email) {
                     prevName = row.name.trim();
-                    owners.set(row.name.trim(), {name: row.name.trim(), email: row.email.trim()});
+                    if (owners.has(row.name.trim())) {
+                        if (!owners.get(row.name.trim())?.emails.includes(row.email.trim().toLowerCase())) {
+                            owners.get(row.name.trim())?.emails.push(row.email.trim().toLowerCase());
+                        }
+                    } else {
+                        owners.set(row.name.trim(), {name: row.name.trim(), emails: [row.email.trim().toLowerCase()]});
+                    }
                 } 
                 if (prevName) {
                     ipsOwners.set(row.ip.trim(), prevName);
@@ -351,6 +349,7 @@ const insertOwners = async(): Promise<Map<string, string>> => {
             })
             .on('end', () => {
                 console.log('Owners CSV file successfully processed');
+                // Insert owners with their emails into the database
                 prisma.owner.createMany({
                     data: Array.from(owners.values())
                 }).then(() => {
@@ -358,6 +357,7 @@ const insertOwners = async(): Promise<Map<string, string>> => {
                 }).catch((error) => {
                     console.error('Error adding owners to the database: ', error);
                 });
+                // Return the mappings of IPs to Owners
                 resolve(ipsOwners);
             })
             .on('error', (error) => {

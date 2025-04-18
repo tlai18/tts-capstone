@@ -17,7 +17,7 @@ generator client {
 
 model Owner {
     name    String @id
-    email   String
+    emails   String[]
     hosts   Host[]
 }
 

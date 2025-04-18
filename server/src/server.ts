@@ -64,9 +64,8 @@ app.get('/hostsByEmail', async (req: Request, res: Response) => {
     // First find the owners by email
     const owners = await prisma.owner.findMany({
       where: {
-        email: {
-          equals: email,
-          mode: 'insensitive'
+        emails: {
+          has: email.toLowerCase().trim(),
         }
       }
     });
@@ -114,9 +113,8 @@ app.get('/ruleGroupsByHost', async (req: Request, res: Response) => {
     
     const owners = await prisma.owner.findMany({
       where: {
-        email: {
-          equals: email,
-          mode: 'insensitive'
+        emails: {
+          has: email.toLowerCase().trim(),
         }
       }
     });
