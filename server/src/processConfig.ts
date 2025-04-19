@@ -22,13 +22,11 @@
  * 2. The action to perform on the database [populate/update]. '-a [action]'. Defaults to 'update'.
  * 
  * Example run:
- * ts-node src/processConfig.ts -f src/server/sample.txt
+ * ts-node src/processConfig.ts -o src/owners.csv -f src/sample.txt
+ *  OR
+ * npx ts-node src/processConfig.ts -o src/owners.csv -f src/sample.txt
  *
- * Example configuration lines:
- * object network Tufts-Management-172.20.0.0
- * subnet 172.20.0.0 255.255.0.0
- * host 130.64.25.50
- * description Added by script
+ * Example configuration file in sample.txt
  * 
  * These configurations are parsed to create and store objects in the MongoDB database.
  */
@@ -209,8 +207,8 @@ const processConfig = async (filePath: string): Promise<void> => {
             ...hosts.map(host =>
                 prisma.host.upsert({
                     where: { objectNetwork: host.objectNetwork },
-                    update: { host: host.host, subnet: host.subnet, description: host.description },
-                    create: { objectNetwork: host.objectNetwork, host: host.host, subnet: host.subnet, description: host.description },
+                    update: { host: host.host, subnet: host.subnet, description: host.description, ownerName: host.ownerName },
+                    create: { objectNetwork: host.objectNetwork, host: host.host, subnet: host.subnet, description: host.description, ownerName: host.ownerName },
                 })
             ),
             ...portGroups.map(portGroup =>
@@ -277,6 +275,112 @@ const processConfig = async (filePath: string): Promise<void> => {
                 })
             ),
         ]);
+        
+        // Delete all objects that no longer exist
+        await prisma.remark.deleteMany({
+            where: {
+                NOT: {
+                    OR: filteredRemarks.map(obj => ({
+                        ruleGroupId: obj.ruleGroupId,
+                        remark: obj.remark,
+                    })),
+                },
+            },
+        });
+        await prisma.ruleToNetworkObject.deleteMany({
+            where: {
+                NOT: {
+                    OR: ruleNetworksArray.map(obj => ({
+                        ruleGroupId: obj.ruleGroupId,
+                        networkObjectId: obj.networkObjectId,
+                    })),
+                },
+            },
+        });
+        await prisma.ruleToNetworkGroup.deleteMany({
+            where: {
+                NOT: {
+                    OR: ruleNetworkGroupsArray.map(obj => ({
+                        ruleGroupId: obj.ruleGroupId,
+                        networkGroupId: obj.networkGroupId,
+                    })),
+                },
+            },
+        });
+        await prisma.rule.deleteMany({
+            where: {
+                NOT: {
+                    ruleBody: {
+                        in: rules.map(obj => obj.ruleBody),
+                    },
+                },
+            },
+        });
+        await prisma.ruleGroup.deleteMany({
+            where: {
+                NOT: {
+                    ruleGroupId: {
+                        in: ruleGroupsArray.map(obj => obj.ruleGroupId),
+                    },
+                },
+            },
+        });
+        await prisma.netGrouptoNetGroup.deleteMany({
+            where: {
+                NOT: {
+                    OR: netGroupRelations.map(obj => ({
+                        parentId: obj.parentId,
+                        childId: obj.childId,
+                    })),
+                },
+            },
+        });
+        await prisma.netGrouptoNetObj.deleteMany({
+            where: {
+                NOT: {
+                    OR: networkRelations.map(obj => ({
+                        networkGroupId: obj.networkGroupId,
+                        networkObjectId: obj.networkObjectId,
+                    })),
+                },
+            },
+        });
+        await prisma.networkGroup.deleteMany({
+            where: {
+                NOT: {
+                    objectGroupNetwork: {
+                        in: networkGroups.map(obj => obj.objectGroupNetwork),
+                    },
+                },
+            },
+        });
+        await prisma.portGroup.deleteMany({
+            where: {
+                NOT: {
+                    name: {
+                        in: portGroups.map(obj => obj.name),
+                    },
+                },
+            },
+        });
+        await prisma.host.deleteMany({
+            where: {
+                NOT: {
+                    objectNetwork: {
+                        in: hosts.map(obj => obj.objectNetwork),
+                    },
+                },
+            },
+        });
+        await prisma.networkObject.deleteMany({
+            where: {
+                NOT: {
+                    name: {
+                        in: networkObjects.map(obj => obj.name),
+                    },
+                },
+            },
+        });
     }
 };
 
@@ -331,25 +435,26 @@ const insertOwners = async(): Promise<Map<string, string>> => {
     
     return new Promise((resolve, reject) => {
         fs.createReadStream(args.owners)
-            .pipe(csv(['name', 'email', 'ip']))
-            .on('data', async (row) => {
-                if (row.name && row.email) {
-                    prevName = row.name.trim();
-                    if (owners.has(row.name.trim())) {
-                        if (!owners.get(row.name.trim())?.emails.includes(row.email.trim().toLowerCase())) {
-                            owners.get(row.name.trim())?.emails.push(row.email.trim().toLowerCase());
-                        }
-                    } else {
-                        owners.set(row.name.trim(), {name: row.name.trim(), emails: [row.email.trim().toLowerCase()]});
+        .pipe(csv(['name', 'email', 'ip']))
+        .on('data', async (row) => {
+            if (row.name && row.email) {
+                prevName = row.name.trim();
+                if (owners.has(row.name.trim())) {
+                    if (!owners.get(row.name.trim())?.emails.includes(row.email.trim().toLowerCase())) {
+                        owners.get(row.name.trim())?.emails.push(row.email.trim().toLowerCase());
                     }
-                } 
-                if (prevName) {
-                    ipsOwners.set(row.ip.trim(), prevName);
+                } else {
+                    owners.set(row.name.trim(), {name: row.name.trim(), emails: [row.email.trim().toLowerCase()]});
                 }
-            })
-            .on('end', () => {
-                console.log('Owners CSV file successfully processed');
-                // Insert owners with their emails into the database
+            } 
+            if (prevName) {
+                ipsOwners.set(row.ip.trim(), prevName);
+            }
+        })
+        .on('end', () => {
+            console.log('Owners CSV file successfully processed');
+            // Insert owners with their emails into the database
+            if (args.action === 'populate') {
                 prisma.owner.createMany({
                     data: Array.from(owners.values())
                 }).then(() => {
@@ -357,14 +462,38 @@ const insertOwners = async(): Promise<Map<string, string>> => {
                 }).catch((error) => {
                     console.error('Error adding owners to the database: ', error);
                 });
-                // Return the mappings of IPs to Owners
-                resolve(ipsOwners);
-            })
-            .on('error', (error) => {
-                console.error('Error processing owners CSV file:', error);
-                reject(error);
-            });
+            } else if (args.action === 'update') {
+                // Upsert all owners that still exist
+                owners.forEach(async (owner) => {
+                    await prisma.owner.upsert({
+                        where: { name: owner.name },
+                        update: { emails: owner.emails },
+                        create: { name: owner.name, emails: owner.emails }
+                    });
+                });
+                // Delete all owners that no longer exist
+                prisma.owner.findMany()
+                .then(async (existingOwners) => {
+                    const existingOwnerNames = new Set(existingOwners.map(owner => owner.name));
+                    owners.forEach(async (owner) => {
+                        if (!existingOwnerNames.has(owner.name)) {
+                            await prisma.owner.delete({
+                                where: { name: owner.name }
+                            });
+                        }
+                    });
+                }).catch((error) => {
+                    console.error('Error fetching existing owners: ', error);
+                });
+            }
+            // Return the mappings of IPs to Owners
+            resolve(ipsOwners);
+        })
+        .on('error', (error) => {
+            console.error('Error processing owners CSV file:', error);
+            reject(error);
         });
+    });
 }
 
 // Read the file path from the command line arguments

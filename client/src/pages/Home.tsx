@@ -89,7 +89,7 @@ const Home: React.FC = () => {
 
     const toggleAuth = () => {
         if (isLoggedIn) {
-            window.location.href = '/Shibboleth.sso/Logout';
+            window.location.href = '/Shibboleth.sso/Logout?return=https://shib-idp-stage.uit.tufts.edu/idp/profile/Logout';
         } else {
             window.location.reload();
         }
