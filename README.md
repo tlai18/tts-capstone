@@ -21,7 +21,7 @@ IP_ADDRESS="http://localhost"
   - `docker exec -it server sh`
 - To quickly reset and update the database with a new file:
   - Run `npx prisma db push --force-reset && npx prisma db seed [filename]` with [filename] being the path to the file containing the new firewall rule configs.
-- To update the database with a valid file:
+- To update the database with a valid file (more resource intensive when running on AWS. might overload the EC2 instance.):
   - Run `npx ts-node src/processConfig.ts -o src/owners.csv -f [filename]` with [filename] being the path to the file containing the updated firewall rule configs.
 - To view the database:
   - Run `npx prisma studio` and navigate to [host]:5555
