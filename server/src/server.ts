@@ -50,7 +50,28 @@ app.get('/getUserInfo', async (req: Request, res: Response) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
-    
+
+
+app.get('ownersByEmail', async (req: Request, res: Response) => {
+    const email = req.headers['mail'] as string;
+    if (!email) {
+        res.status(400).json({ error: 'Email parameter is required' });
+        return;
+    }
+    try {
+        const owners = await prisma.owner.findMany({
+            where: {
+                emails: {
+                    has: email.toLowerCase().trim(),
+                }
+            }
+        });
+        res.json(owners.map(owner => owner.name));
+    } catch (error) {
+        console.error('Error fetching owners by email:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
 
 app.get('/hostsByEmail', async (req: Request, res: Response) => {
   const email = req.headers['mail'] as string;
