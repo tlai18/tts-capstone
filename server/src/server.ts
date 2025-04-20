@@ -52,7 +52,7 @@ app.get('/getUserInfo', async (req: Request, res: Response) => {
 });
 
 
-app.get('ownersByEmail', async (req: Request, res: Response) => {
+app.get('/ownersByEmail', async (req: Request, res: Response) => {
     const email = req.headers['mail'] as string;
     if (!email) {
         res.status(400).json({ error: 'Email parameter is required' });
