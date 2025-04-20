@@ -201,10 +201,7 @@ const Home: React.FC = () => {
                                 Managing hosts for <span style={{ color: '#1e40af', fontWeight: 600 }}>{userEmail}</span>
                             </h4>
                             <small style={{ color: '#94a3b8' }}>
-                                {ips.length} {ips.length === 1 ? 'host' : 'hosts'} available
-                            </small>
-                            <small style={{ color: '#94a3b8' }}>
-                                From: {owners.length > 0 ? owners.join(', ') : 'No organizations found'}
+                                {ips.length} {ips.length === 1 ? 'host' : 'hosts'} available for: {owners.length > 0 ? owners.join(', ') : 'No organizations found'}
                             </small>
                         </div>
                         <span style={{
