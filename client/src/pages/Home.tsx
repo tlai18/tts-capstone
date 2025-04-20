@@ -17,6 +17,7 @@ const Home: React.FC = () => {
     const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
     const [userEmail, setUserEmail] = useState<string>("");
     const [userID, setUserID] = useState<string>("");
+    const [owners, setOwners] = useState<string[]>([]);
 
     // Fetch data when component mounts and login state changes
     useEffect(() => {
@@ -39,17 +40,30 @@ const Home: React.FC = () => {
             });
         }).then(response => {
             if (!response.ok) {
-                throw new Error('Network response was not ok');
+                throw new Error('Network response  when fetching hosts from email was not ok');
             }
             return response.json();
         }).then(data => {
             setIPs(data);
             setFilteredIPs(data);
+        }).then(() => {
+            return fetch (`/api/ownersByEmail`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }).then(response => {
+            if (!response.ok) {
+                throw new Error('Network response when fetching owners from email was not ok');
+            }
+            return response.json();
+        }).then(data => {
+            setOwners(data);
         }).catch(err => {
             console.error('Error:', err);
             setUserEmail("");
             setUserID("");
             setIsLoggedIn(false);
+            setOwners([]);
         })
     }, []);
 
@@ -188,6 +202,9 @@ const Home: React.FC = () => {
                             </h4>
                             <small style={{ color: '#94a3b8' }}>
                                 {ips.length} {ips.length === 1 ? 'host' : 'hosts'} available
+                            </small>
+                            <small style={{ color: '#94a3b8' }}>
+                                From: {owners.length > 0 ? owners.join(', ') : 'No organizations found'}
                             </small>
                         </div>
                         <span style={{
