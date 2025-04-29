@@ -240,7 +240,7 @@ const Home: React.FC = () => {
                     <div className="card shadow-sm border-0 overflow-hidden">
                         <div className="card-body p-0">
                             <div className="row g-0">
-                                {/* Hosts List - 1/3 */}
+                                {/* Hosts List */}
                                 <div className="col-md-2 border-end" style={{ backgroundColor: '#ffffff' }}>
                                     <div className="p-4">
                                         <h3 className="text-primary mb-3" style={{ fontWeight: 600 }}>Hosts</h3>
@@ -258,7 +258,7 @@ const Home: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* Rule Groups - 2/3 */}
+                                {/* Rule Groups */}
                                 <div className="col-md-10" style={{ backgroundColor: '#f9fafb' }}>
                                     <div className="p-4">
                                         <div className="d-flex justify-content-between align-items-center mb-3">
