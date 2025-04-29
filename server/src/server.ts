@@ -115,7 +115,7 @@ app.get('/hostsByEmail', async (req: Request, res: Response) => {
 });
 
 app.get('/ruleGroupsByHost', async (req: Request, res: Response) => {
-  const { host } = req.query; // Extract the host from query parameters
+  const { host } = req.query;
 
   if (!host) {
     res.status(400).json({ error: 'Host parameter is required' });
@@ -166,7 +166,7 @@ app.get('/ruleGroupsByHost', async (req: Request, res: Response) => {
     const networkObject = await prisma.networkObject.findFirst({
       where: {
         host: {
-          host: host as string, // Match the host field in the Host model
+          host: host as string,
         },
       },
       include: {

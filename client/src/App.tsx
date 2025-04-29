@@ -46,24 +46,10 @@ const App: React.FC = () => {
         </nav> */}
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route
-            path="/protected"
-            element={user ? <ProtectedPage user={user} /> : <Navigate to="/auth/login" />}
-          />
-          <Route path="/auth/login" element={<Login />} />
-          <Route path="/testing" element={<Testing />} />
-
         </Routes>
       </div>
     </Router>
   );
 };
-
-const ProtectedPage: React.FC<{ user: { email: string; name: string } }> = ({ user }) => (
-  <div>
-    <h1>Protected Page</h1>
-    <p>Welcome, {user.name}! You have access to this protected content.</p>
-  </div>
-);
 
 export default App;
